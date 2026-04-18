@@ -70,7 +70,6 @@ namespace dyno
 				{
 					fraction(i, j, k) = (i < 32 && j < 32) ? 1.0f : 0.0f;
 					initial_vel(i, j, k) = Coord(0, 0, 0);
-					host_vel(i, j, k) = 0;
 					host_omega(i, j, k) = 1;
 				}
 			}
@@ -78,7 +77,6 @@ namespace dyno
 		pf->volumeFraction().assign(fraction);
 		this->stateMass()->assign(fraction);
 		this->stateVelocity()->assign(initial_vel);
-		vel_v.assign(host_vel);
 		omega.assign(host_omega);
 
 		fraction.clear();
@@ -87,7 +85,7 @@ namespace dyno
 	template<typename TDataType>
 	void EulerianFluid3D<TDataType>::updateStates()
 	{
-		Real gamma = 0.05;
+		Real gamma = 0.005;
 
 		auto phase = this->statePhaseField()->getDataPtr();
 		auto dt = this->stateTimeStep()->getValue();
@@ -97,7 +95,9 @@ namespace dyno
 		auto& mass = this->stateMass()->getData();
 		auto& vel = this->stateVelocity()->getData();
 
-		PFKernel::ApplyGravity(vel_u, vel_v, vel_w, Coord(0, -2.0, 0.0), dim.x, dim.y, dim.z, dt);
+		PFKernel::ApplyGravity(vel, Coord(0, -0.5, 0.0), dt);
+
+		PFKernel::InterpolateVelocity(vel_u, vel_v, vel_w, vel);
 
 		PFKernel::SetU(vel_u);
 		PFKernel::SetV(vel_v);
@@ -109,8 +109,8 @@ namespace dyno
 			PFKernel::Projection(pressure, mb0, mat, RHS, 1);
 		}
 		PFKernel::UpdateVelocity(vel_u, vel_v, vel_w, pressure, mass, h, dt);
-
-		PFKernel::InterpolateVelocity(vel, vel_u, vel_v, vel_w);
+// 
+ 		PFKernel::InterpolateVelocity(vel, vel_u, vel_v, vel_w);
 
 		//Advect
 		mb0.assign(mass);
@@ -119,9 +119,6 @@ namespace dyno
 		velBuf.assign(vel);
 		velSrc.assign(vel);
 		PFKernel::AdvectBackward(vel, velBuf, velSrc, dt);
-		PFKernel::InterpolateVelocity(vel_u, vel_v, vel_w, vel);
-
-		//printf("total mass: %f", PFKernel::calcualteTotalMass(mass));
 
 		//Sharpening
 		mb0.assign(mass);
@@ -130,8 +127,8 @@ namespace dyno
 		mb0.assign(mass);
 		float a = 1.0f * gamma / h / h * dt;// dt;
 		PFKernel::Jacobi(mass, mb0, mb1, vel, a, 1.0f + 6.0f * a, 10);
-
-		phase->volumeFraction().assign(mass);
+// 
+ 		phase->volumeFraction().assign(mass);
 	}
 
 	DEFINE_CLASS(EulerianFluid3D);

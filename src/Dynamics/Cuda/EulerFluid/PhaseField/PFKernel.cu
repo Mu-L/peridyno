@@ -82,28 +82,15 @@ namespace dyno{
 			uint j = blockIdx.y * blockDim.y + threadIdx.y;
 			uint k = blockIdx.z * blockDim.z + threadIdx.z;
 
-			if (i >= vel.nx() - 1) return;
-			if (j >= vel.ny() - 1) return;
-			if (k >= vel.nz() - 1) return;
-
-// 			if (i == vel.nx - 1) { vel_u(0, j, k) = 0.0f;  vel_u(vel.nx, j, k) = 0.0f; return; }
-// 			if (j == vel.ny - 1) { vel_v(i, 0, k) = 0.0f;  vel_v(i, vel.ny, k) = 0.0f; return; }
-// 			if (k == vel.nz - 1) { vel_w(i, j, 0) = 0.0f;  vel_w(i, j, vel.nz) = 0.0f; return; }
-
-			float vx, vy, vz;
+			if (i >= vel.nx()) return;
+			if (j >= vel.ny()) return;
+			if (k >= vel.nz()) return;
 
 			auto v = vel(i, j, k);
-			auto v_i_plus = vel(i + 1, j, k);
-			auto v_j_plus = vel(i, j + 1, k);
-			auto v_k_plus = vel(i, j, k + 1);
 
-			vx = 0.5f*(v.x + v_i_plus.x);
-			vy = 0.5f*(v.y + v_j_plus.y);
-			vz = 0.5f*(v.z + v_k_plus.z);
-
-			if(i < vel.nx() - 1)vel_u(i + 1, j, k) = vx;
-			if(j < vel.ny() - 1)vel_v(i, j + 1, k) = vy;
-			if(k < vel.nz() - 1)vel_w(i, j, k + 1) = vz;
+			if (i < vel.nx() - 1) { auto v_i_plus = vel(i + 1, j, k); auto vx = 0.5f * (v.x + v_i_plus.x); vel_u(i + 1, j, k) = vx; }
+			if (j < vel.ny() - 1) { auto v_j_plus = vel(i, j + 1, k); auto vy = 0.5f * (v.y + v_j_plus.y); vel_v(i, j + 1, k) = vy; }
+			if (k < vel.nz() - 1) { auto v_k_plus = vel(i, j, k + 1); auto vz = 0.5f * (v.z + v_k_plus.z); vel_w(i, j, k + 1) = vz; }
 		}
 
 		__global__ void K_DampVelocity(Grid3f vel, float radius)
@@ -165,6 +152,40 @@ namespace dyno{
 			float fx, fy, fz;
 			float w000, w100, w010, w001, w111, w011, w101, w110;
 
+			fx = i - vel_ijk.x * dt;
+			fy = j - vel_ijk.y * dt;
+			fz = k - vel_ijk.z * dt;
+
+			if (fx < 0.0) fx = 0.0;
+			if (fx > nx - 1) fx = nx - 1.0;
+			if (fy < 0.0) fy = 0.0f;
+			if (fy > ny - 1) fy = ny - 1.0;
+			if (fz < 0.0) fz = 0.0f;
+			if (fz > nz - 1) fz = nz - 1.0;
+
+			ix = uint(fx);      iy = uint(fy);		iz = uint(fz);
+			fx -= ix;			fy -= iy;			fz -= iz;
+
+			if (ix == nx - 1) { ix = nx - 2; fx = 1.0; }
+			if (iy == ny - 1) { iy = ny - 2; fy = 1.0; }
+			if (iz == nz - 1) { iz = nz - 2; fz = 1.0; }
+
+			w000 = (1.0f - fx) * (1.0f - fy) * (1.0f - fz);
+			w100 = fx * (1.0f - fy) * (1.0f - fz);
+			w010 = (1.0f - fx) * fy * (1.0f - fz);
+			w001 = (1.0f - fx) * (1.0f - fy) * fz;
+			w111 = fx * fy * fz;
+			w011 = (1.0f - fx) * fy * fz;
+			w101 = fx * (1.0f - fy) * fz;
+			w110 = fx * fy * (1.0f - fz);
+
+			Vec3f vel_ijk_p = w000 * vel(ix, iy, iz) + w100 * vel(ix + 1, iy, iz) +
+				w010 * vel(ix, iy + 1, iz) + w001 * vel(ix, iy, iz + 1) +
+				w111 * vel(ix + 1, iy + 1, iz + 1) + w011 * vel(ix, iy + 1, iz + 1) +
+				w101 * vel(ix + 1, iy, iz + 1) + w110 * vel(ix + 1, iy + 1, iz);
+
+			vel_ijk = (vel_ijk_p + vel_ijk) * 0.5f;
+
 			fx = i - vel_ijk.x*dt;
 			fy = j - vel_ijk.y*dt;
 			fz = k - vel_ijk.z*dt;
@@ -192,11 +213,8 @@ namespace dyno{
 			w101 = fx*(1.0f - fy)*fz;
 			w110 = fx*fy*(1.0f - fz);
 
-			int nxy = nx*ny;
-			int k0 = ix + iy*nx + iz*nxy;
-
-			dst(i, j, k) = w000*src[k0] + w100*src[k0 + 1] + w010*src[k0 + nx] + w001*src[k0 + nxy]
-				+ w111*src[k0 + 1 + nx + nxy] + w011*src[k0 + nx + nxy] + w101*src[k0 + 1 + nxy] + w110*src[k0 + 1 + nx];
+			dst(i, j, k) = w000*src(ix, iy, iz) + w100 * src(ix + 1, iy, iz) + w010 * src(ix, iy + 1, iz) + w001 * src(ix, iy, iz + 1)
+				+ w111*src(ix + 1, iy + 1, iz + 1) + w011*src(ix, iy + 1, iz + 1) + w101*src(ix + 1, iy, iz + 1) + w110*src(ix + 1, iy + 1, iz);
 		}
 
 		void PFKernel::AdvectBackward(Grid1f dst, Grid1f src, Grid3f vel, float dt)
@@ -591,8 +609,42 @@ namespace dyno{
 			float fx, fy, fz;
 			int ix, iy, iz;
 			float w000, w100, w010, w001, w111, w011, w101, w110;
-			
+
 			auto vel_ijk = vel(i, j, k);
+
+			fx = i + vel_ijk.x * dt;
+			fy = j + vel_ijk.y * dt;
+			fz = k + vel_ijk.z * dt;
+
+			if (fx < 0.0) fx = 0.0;
+			if (fx > nx - 1) fx = nx - 1.0;
+			if (fy < 0.0) fy = 0.0f;
+			if (fy > ny - 1) fy = ny - 1.0;
+			if (fz < 0.0) fz = 0.0f;
+			if (fz > nz - 1) fz = nz - 1.0;
+
+			ix = int(fx);      iy = int(fy);		iz = int(fz);
+			fx -= ix;			fy -= iy;			fz -= iz;
+
+			if (ix == nx - 1) { ix = nx - 2; fx = 1.0; }
+			if (iy == ny - 1) { iy = ny - 2; fy = 1.0; }
+			if (iz == nz - 1) { iz = nz - 2; fz = 1.0; }
+
+			w000 = (1.0f - fx) * (1.0f - fy) * (1.0f - fz);
+			w100 = fx * (1.0f - fy) * (1.0f - fz);
+			w010 = (1.0f - fx) * fy * (1.0f - fz);
+			w001 = (1.0f - fx) * (1.0f - fy) * fz;
+			w111 = fx * fy * fz;
+			w011 = (1.0f - fx) * fy * fz;
+			w101 = fx * (1.0f - fy) * fz;
+			w110 = fx * fy * (1.0f - fz);
+
+			Vec3f vel_ijk_p = w000 * vel(ix, iy, iz) + w100 * vel(ix + 1, iy, iz) +
+				w010 * vel(ix, iy + 1, iz) + w001 * vel(ix, iy, iz + 1) +
+				w111 * vel(ix + 1, iy + 1, iz + 1) + w011 * vel(ix, iy + 1, iz + 1) +
+				w101 * vel(ix + 1, iy, iz + 1) + w110 * vel(ix + 1, iy + 1, iz);
+
+			vel_ijk = (vel_ijk_p + vel_ijk) * 0.5f;
 
 			fx = i + vel_ijk.x*dt;
 			fy = j + vel_ijk.y*dt;
@@ -1790,6 +1842,40 @@ namespace dyno{
 			float fx, fy, fz;
 			float w000, w100, w010, w001, w111, w011, w101, w110;
 
+			fx = i - vel_ijk.x * dt;
+			fy = j - vel_ijk.y * dt;
+			fz = k - vel_ijk.z * dt;
+
+			if (fx < 0.0) fx = 0.0;
+			if (fx > nx - 1) fx = nx - 1.0;
+			if (fy < 0.0) fy = 0.0f;
+			if (fy > ny - 1) fy = ny - 1.0;
+			if (fz < 0.0) fz = 0.0f;
+			if (fz > nz - 1) fz = nz - 1.0;
+
+			ix = uint(fx);      iy = uint(fy);		iz = uint(fz);
+			fx -= ix;			fy -= iy;			fz -= iz;
+
+			if (ix == nx - 1) { ix = nx - 2; fx = 1.0; }
+			if (iy == ny - 1) { iy = ny - 2; fy = 1.0; }
+			if (iz == nz - 1) { iz = nz - 2; fz = 1.0; }
+
+			w000 = (1.0f - fx) * (1.0f - fy) * (1.0f - fz);
+			w100 = fx * (1.0f - fy) * (1.0f - fz);
+			w010 = (1.0f - fx) * fy * (1.0f - fz);
+			w001 = (1.0f - fx) * (1.0f - fy) * fz;
+			w111 = fx * fy * fz;
+			w011 = (1.0f - fx) * fy * fz;
+			w101 = fx * (1.0f - fy) * fz;
+			w110 = fx * fy * (1.0f - fz);
+
+			Vec3f vel_ijk_p = w000 * vel(ix, iy, iz) + w100 * vel(ix + 1, iy, iz) +
+				w010 * vel(ix, iy + 1, iz) + w001 * vel(ix, iy, iz + 1) +
+				w111 * vel(ix + 1, iy + 1, iz + 1) + w011 * vel(ix, iy + 1, iz + 1) +
+				w101 * vel(ix + 1, iy, iz + 1) + w110 * vel(ix + 1, iy + 1, iz);
+
+			vel_ijk = (vel_ijk_p + vel_ijk) * 0.5f;
+
 			fx = i - vel_ijk.x*dt;
 			fy = j - vel_ijk.y*dt;
 			fz = k - vel_ijk.z*dt;
@@ -1817,11 +1903,8 @@ namespace dyno{
 			w101 = fx*(1.0f - fy)*fz;
 			w110 = fx*fy*(1.0f - fz);
 
-			int nxy = nx*ny;
-			int k0 = ix + iy*nx + iz*nxy;
-
-			dst(i, j, k) = w000*src[k0] + w100*src[k0 + 1] + w010*src[k0 + nx] + w001*src[k0 + nxy]
-				+ w111*src[k0 + 1 + nx + nxy] + w011*src[k0 + nx + nxy] + w101*src[k0 + 1 + nxy] + w110*src[k0 + 1 + nx];
+			dst(i, j, k) = w000 * src(ix, iy, iz) + w100 * src(ix + 1, iy, iz) + w010 * src(ix, iy + 1, iz) + w001 * src(ix, iy, iz + 1)
+				+ w111 * src(ix + 1, iy + 1, iz + 1) + w011 * src(ix, iy + 1, iz + 1) + w101 * src(ix + 1, iy, iz + 1) + w110 * src(ix + 1, iy + 1, iz);
 		}
 
 		void PFKernel::AdvectBackward(Grid3f dst, Grid3f src, Grid3f vel, float dt)
@@ -2566,35 +2649,32 @@ namespace dyno{
 			if (j >= ny) return;
 			if (k >= nz) return;
 
-			if (i == 0) { vel_u(i, j, k) = 0.0f; return; }
-			if (i == nx - 1) { vel_u(i + 1, j, k) = 0.0f; return; }
-			if (j == 0) { vel_v(i, j, k) = 0.0f; return; }
-			if (j == ny - 1) { vel_v(i, j + 1, k) = 0.0f; return; }
-			if (k == 0) { vel_w(i, j, k) = 0.0f; return; }
-			if (k == nz - 1) { vel_w(i, j, k + 1) = 0.0f; return; }
-
-
-			int index;
-			float c;
-
-			int nxy = nx*ny;
-
-			index = mass.index(i, j, k);
-			c = 0.5f*(mass[index - 1] + mass[index]);
-			c = c > 1.0f ? 1.0f : c;
-			c = c < 0.0f ? 0.0f : c;
-			vel_u(i, j, k) -= dt*(pressure[index] - pressure[index - 1]) / h / (c*RHO1 + (1.0f - c)*RHO2);
-
-			c = 0.5f*(mass[index] + mass[index - nx]);
-			c = c > 1.0f ? 1.0f : c;
-			c = c < 0.0f ? 0.0f : c;
-			vel_v(i, j, k) -= dt*(pressure[index] - pressure[index - nx]) / h / (c*RHO1 + (1.0f - c)*RHO2);
-
-			c = 0.5f*(mass[index] + mass[index - nxy]);
-			c = c > 1.0f ? 1.0f : c;
-			c = c < 0.0f ? 0.0f : c;
-			vel_w(i, j, k) -= dt*(pressure[index] - pressure[index - nxy]) / h / (c*RHO1 + (1.0f - c)*RHO2);
-
+			//u(i, j, k) -= (p_(i, j, k) - p_(i - 1, j, k)) / h / rho
+			if (i > 0)
+			{
+				float c = 0.5f * (mass(i - 1, j, k) + mass(i, j, k));
+				c = c > 1.0f ? 1.0f : c;
+				c = c < 0.0f ? 0.0f : c;
+				vel_u(i, j, k) -= dt * (pressure(i, j, k) - pressure(i - 1, j, k)) / h / (c * RHO1 + (1.0f - c) * RHO2);
+			}
+			
+			//v(i, j, k) -= (p_(i, j, k) - p_(i, j - 1, k)) / h / rho
+			if (j > 0)
+			{
+				float c = 0.5f * (mass(i, j, k) + mass(i, j - 1, k));
+				c = c > 1.0f ? 1.0f : c;
+				c = c < 0.0f ? 0.0f : c;
+				vel_v(i, j, k) -= dt * (pressure(i, j, k) - pressure(i, j - 1, k)) / h / (c * RHO1 + (1.0f - c) * RHO2);
+			}
+			
+			//w(i, j, k) -= (p_(i, j, k) - p_(i, j, k - 1)) / h / rho
+			if (k > 0)
+			{
+				float c = 0.5f * (mass(i, j, k) + mass(i, j, k - 1));
+				c = c > 1.0f ? 1.0f : c;
+				c = c < 0.0f ? 0.0f : c;
+				vel_w(i, j, k) -= dt * (pressure(i, j, k) - pressure(i, j, k - 1)) / h / (c * RHO1 + (1.0f - c) * RHO2);
+			}
 		}
 
 		void PFKernel::UpdateVelocity(Grid1f vel_u, Grid1f vel_v, Grid1f vel_w, Grid1f pressure, Grid1f mass, float h, float dt)
@@ -2648,43 +2728,28 @@ namespace dyno{
 		}
 
 		__global__ void K_ApplyGravity(
-			Grid1f u,
-			Grid1f v,
-			Grid1f w,
+			Grid3f v,
 			Vec3f g,
-			int nx,
-			int ny,
-			int nz,
 			float dt)
 		{
 			int i = blockDim.x * blockIdx.x + threadIdx.x;
 			int j = blockIdx.y * blockDim.y + threadIdx.y;
 			int k = blockIdx.z * blockDim.z + threadIdx.z;
 
-			if (i >= nx) return;
-			if (j >= ny) return;
-			if (k >= nz) return;
+			if (i >= v.nx()) return;
+			if (j >= v.ny()) return;
+			if (k >= v.nz()) return;
 
-			if(i < nx - 1)
-				u(i, j, k) += g.x * dt;
-
-			if(j < ny - 1)
-				v(i, j, k) += g.y * dt;
-
-			if(k < nz - 1)
-				w(i, j, k) += g.z * dt;
+			v(i, j, k) += g * dt;
 		}
 
-		void PFKernel::ApplyGravity(Grid1f u, Grid1f v, Grid1f w, Vec3f g, 
-			int nx,
-			int ny,
-			int nz, float dt)
+		void PFKernel::ApplyGravity(Grid3f v, Vec3f g, float dt)
 		{
 			dim3 gridDims, blockDims;
-			uint3 fDims = make_uint3(nx, ny, nz);
+			uint3 fDims = make_uint3(v.nx(), v.ny(), v.nz());
 			computeGridSize3D(fDims, make_uint3(32, 8, 1), gridDims, blockDims);
 
-			K_ApplyGravity << < gridDims, blockDims >> > (u, v, w, g, nx, ny, nz, dt);
+			K_ApplyGravity << < gridDims, blockDims >> > (v, g, dt);
 		}
 
 		__global__ void K_SetU(Grid1f vel_u)
@@ -2701,10 +2766,9 @@ namespace dyno{
 			if (j >= ny) return;
 			if (k >= nz) return;
 
-			if (i <= 0 || i >= nx-1)
-			{
-				vel_u(i, j, k) = 0.0f;
-			}
+			//Impose free-slip boundary condition
+			if (i == 0) { vel_u(i, j, k) = 0; }
+			if (i == nx - 1) { vel_u(i, j, k) = 0; }
 		}
 
 		__global__ void K_SetV(Grid1f vel_v)
@@ -2721,10 +2785,9 @@ namespace dyno{
 			if (j >= ny) return;
 			if (k >= nz) return;
 
-			if (j <= 0 || j >= ny - 1)
-			{
-				vel_v(i, j, k) = 0.0f;
-			}
+			//Impose free-slip boundary condition
+			if (j == 0) { vel_v(i, j, k) = 0; }
+			if (j == ny - 1) { vel_v(i, j, k) = 0; }
 		}
 
 		__global__ void K_SetW(Grid1f vel_w)
@@ -2741,10 +2804,9 @@ namespace dyno{
 			if (j >= ny) return;
 			if (k >= nz) return;
 
-			if (k <= 0 || k >= nz - 1)
-			{
-				vel_w(i, j, k) = 0.0f;
-			}
+			//Impose free-slip boundary condition
+			if (k == 0) { vel_w(i, j, k) = 0; }
+			if (k == nz - 1) { vel_w(i, j, k) = 0; }
 
 		}
 
@@ -2806,7 +2868,9 @@ namespace dyno{
 			K_Reshape << < gridDims, blockDims >> > (mass1d, mass);
 
 			Reduction<float> reduce;
-			return reduce.maximum(mass1d.begin(), mass1d.size());
+			float total = reduce.maximum(mass1d.begin(), mass1d.size());
+			mass1d.clear();
+			return total;
 		}
 
 // 		__global__ void k_InputDensity(Grid1f mass, Grid4f pigments, Grid4f pgColor, Grid1f extMass, float* density_brush, float4 * distance_brush, float4* color_brush, float4 fillColor, int3 simOrigin, int3 brushOrigin, int nLayer, float mixRate)

@@ -139,10 +139,7 @@ namespace dyno{
 
 		static void ApplyDragForce(Grid3f vel, float dt);
 
-		static void ApplyGravity(Grid1f u, Grid1f v, Grid1f w, Vec3f g, 
-			int nx,
-			int ny,
-			int nz, float dt);
+		static void ApplyGravity(Grid3f v, Vec3f g, float dt);
 
 		static void SetU(Grid1f vel_u);
 

@@ -60,7 +60,7 @@ std::shared_ptr<SceneGraph> createScene()
 	fluid3d->graphicsPipeline()->pushModule(p2v);
 
 	auto v2t = std::make_shared<VolumeToTriangleSet<DataType3f>>();
-	v2t->varIsoValue()->setValue(0.2f);
+	v2t->varIsoValue()->setValue(0.5f);
 	p2v->outLevelSet()->connect(v2t->inVolume());
 	fluid3d->graphicsPipeline()->pushModule(v2t);
 
