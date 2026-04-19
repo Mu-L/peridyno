@@ -3,7 +3,7 @@
 
 #include "Topology/PhaseField.h"
 
-#include "PhaseField/PFKernel.h"
+#include "PhaseField/PhaseFieldKernels.h"
 
 namespace dyno
 {
@@ -29,32 +29,9 @@ namespace dyno
 
 	protected:
 		void resetStates() override;
-		void updateStates() override;
+		void postUpdateStates() override;
 
 	private:
-		DArray3D<Real> vel_u;
-		DArray3D<Real> vel_v;
-		DArray3D<Real> vel_w;
-
-		DArray3D<Real> pre_vel_u;
-		DArray3D<Real> pre_vel_v;
-		DArray3D<Real> pre_vel_w;
-
-		DArray3D<Coord> velBuf;
-		DArray3D<Coord> velSrc;
-
-		DArray3D<Real> omega;
-
-		DArray3D<Coord> dir;
-
-		DArray3D<Coef> mat;
-		DArray3D<Real> RHS;
-		DArray3D<Real> pressure;
-
-		//mass buffer
-		DArray3D<Real> mb0;
-		DArray3D<Real> mb1;
-
-		Grid4f pigments;
+		
 	};
 }

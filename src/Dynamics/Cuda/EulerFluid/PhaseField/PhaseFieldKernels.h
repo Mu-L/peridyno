@@ -86,7 +86,7 @@ namespace dyno{
 	typedef DArray3D<Vec4f> Grid4f;
 	typedef DArray3D<Coef> GridCoef;
 
-	class PFKernel
+	class PhaseFieldKernels
 	{
 	public:
 		static void InterpolateVelocity(Grid3f vel, Grid1f vel_u, Grid1f vel_v, Grid1f vel_w);
@@ -95,34 +95,13 @@ namespace dyno{
 
 		static void AdvectBackward(Grid1f dst, Grid1f src, Grid3f vel, float dt);
 
-		//static void AdvectBackwardFromCanvas(Grid1f, Grid3f vel, float dt, uint3 simOrigin);
-
 		static void AdvectStaggeredBackward(Grid1f dst, Grid1f src, Grid1f vel_u, Grid1f vel_v, Grid1f vel_w, float dt, int axis);
 
 		static void AdvectForward(Grid1f dst, Grid1f src, Grid3f vel, float dt);
 
-		//static void AdvectPigments(Grid3f pos, Grid1f mass, Grid3f vel, float dt);
-
-		//static void DepositParticles(Grid3f gPos, Grid3f prePos, Grid4f gColor, Grid4f preColor, Grid1i gNum, Grid1i preNum, Grid1f gAcc, Grid1f preAcc, Grid1u gMutex, Grid1f mass);
-
-		//static void SeedNewParticles(Grid3f gPos, Grid4f gColor, Grid4f preColor, Grid1i gNum, Grid1f gAcc, Grid1f preAcc, Grid1f mass, Grid3f vel, float dt);
-
-		//static void RasterizePigments2Grid(Grid4f pgOnCenter, Grid3f pos, Grid4f color, Grid1i counter, uint3 winOrigin);
-
 		static void AdvectBackward(Grid3f dst, Grid3f src, Grid3f vel, float dt);
 
-		//Similar to AdvectBackward, except special treatment near boundary
-		static void AdvectBackwardColor(Grid4f dst, Grid4f src, Grid3f vel, float dt);
-
-		static void AdvectBFECC(Grid4f dst, Grid4f src, Grid4f buf, Grid1f weight, Grid3f vel, float dt);
-
 		static void AdvectForward(Grid4f dst, Grid4f src, Grid3f vel, Grid1f weight, float dt);
-
-// 		static void ExtraploateColor(Grid4f dst, Grid4f src, Grid1f mass, Grid1f pre_mass, int iteration);
-
-//		static void ExtraploateMass(Grid4f dst, Grid4f src, Grid1f mass, Grid1f pre_mass, float* density_brush, int3 simOrigin, int3 brushOrigin, int iteration);
-
-// 		static void ExtraploateColor(Grid4f dst, Grid4f src, Grid1f mass, Grid1f pre_mass, Grid3f pos, Grid4f color, Grid1i num, Grid1f accuracy, int iteration);
 
 		static void Sharpening(Grid1f dst, Grid3f dir, Grid1f src, Grid1f vel_u, Grid1f vel_v, Grid1f vel_w, Grid1f omega, float gamma,
 			float h, float dt);
@@ -137,8 +116,6 @@ namespace dyno{
 
 		static void UpdateVelocity(Grid1f vel_u, Grid1f vel_v, Grid1f vel_w, Grid1f pressure, Grid1f mass, float h, float dt);
 
-		static void ApplyDragForce(Grid3f vel, float dt);
-
 		static void ApplyGravity(Grid3f v, Vec3f g, float dt);
 
 		static void SetU(Grid1f vel_u);
@@ -147,26 +124,5 @@ namespace dyno{
 
 		static void SetW(Grid1f vel_w);
 
-		static float calcualteTotalMass(Grid1f mass);
-
-		//static void InputDensity(Grid1f mass, Grid1f mb0, Grid1f mb1, Grid4f pigments, Grid4f cb0, Grid4f cb1, Grid4f subPigs, uint3 cvOrigin, float dt);
-
-		//static void InputVelocity(Grid1f vel_u, Grid1f vel_v, Grid1f vel_w, Grid1f mass, uint3 cvOrigin, float dt);
-
-		//static void SetupDensityField(Grid1f field, Grid4f pigment, uint3 cvOrigin);
-
-		//static void SetupParticles(Grid3f gPos, Grid4f gColor);
-
-		//static void InitialCanvas();
-
-		//static void MoveSimWindow(Grid1f mass, Grid1f pre_mass, Grid4f pigments, Grid4f pre_pigments, Grid1f vel_u, Grid1f pre_vel_u, Grid1f vel_v, Grid1f pre_vel_v, Grid1f vel_w, Grid1f pre_vel_w, uint3 originLast, uint3 originNow);
-
-		//static void MoveSimWindow(Grid1f mass, Grid1f pre_mass, Grid1f vel_u, Grid1f pre_vel_u, Grid1f vel_v, Grid1f pre_vel_v, Grid1f vel_w, Grid1f pre_vel_w, uint3 originLast, uint3 originNow);
-
-		//static void MovePigments(Grid4f color, Grid4f preColor, Grid3f pos, Grid3f prePos, Grid1i num, Grid1i preNum, Grid1f acc, Grid1f preAcc, uint3 originLast, uint3 originNow);
-
-		//static void Step();
-
-		//static void SetPhaseFieldParameters(PFParameter* params);
 	};
 }
