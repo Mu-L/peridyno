@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Platform.h"
+#include "DataTypes.h"
+#include "Object.h"
 #include "Vector.h"
 #include "Array/Array.h"
 #include "Array/Array3D.h"
@@ -35,30 +37,6 @@ namespace dyno{
 		fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), __FILE__, __LINE__); exit(code);					\
 	}																														\
 }
-
-// 	static uint iDivUp(uint a, uint b)
-// 	{
-// 		return (a % b != 0) ? (a / b + 1) : (a / b);
-// 	}
-
-	// compute grid and thread block size for a given number of elements
-	static void computeGridSize(uint n, uint blockSize, uint& numBlocks, uint& numThreads)
-	{
-		numThreads = blockSize < n ? blockSize : n;
-		numBlocks = iDivUp(n, numThreads);
-	}
-
-	static void computeGridSize2D(uint2 dims, uint2 blockSize, dim3& gridDim, dim3& blockDim)
-	{
-		gridDim.x = iDivUp(dims.x, blockSize.x);
-		gridDim.y = iDivUp(dims.y, blockSize.y);
-		gridDim.z = 1;
-
-		blockDim.x = blockSize.x;
-		blockDim.y = blockSize.y;
-		blockDim.z = 1;
-	}
-
 	static void computeGridSize3D(uint3 dims, uint3 blockSize, dim3& gridDim, dim3& blockDim)
 	{
 		gridDim.x = iDivUp(dims.x, blockSize.x);
@@ -81,14 +59,20 @@ namespace dyno{
 		float z1;
 	};
 
-	typedef DArray3D<int> Grid1i;
-	typedef DArray3D<Vec3f> Grid3f;
-	typedef DArray3D<Vec4f> Grid4f;
-	typedef DArray3D<Coef> GridCoef;
-
+	template<typename TDataType>
 	class PhaseFieldKernels
 	{
+		typedef typename TDataType::Real Real;
+
+		typedef typename DArray3D<int> Grid1i;
+		typedef typename DArray3D<Real> Grid1f;
+		typedef typename DArray3D<Vector<Real, 3>> Grid3f;
+		typedef typename DArray3D<Vector<Real, 4>> Grid4f;
+		typedef typename DArray3D<Coef> GridCoef;
+
 	public:
+		PhaseFieldKernels() {};
+
 		static void InterpolateVelocity(Grid3f vel, Grid1f vel_u, Grid1f vel_v, Grid1f vel_w);
 
 		static void InterpolateVelocity(Grid1f vel_u, Grid1f vel_v, Grid1f vel_w, Grid3f vel);
@@ -123,6 +107,5 @@ namespace dyno{
 		static void SetV(Grid1f vel_v);
 
 		static void SetW(Grid1f vel_w);
-
 	};
 }

@@ -64,38 +64,38 @@ namespace dyno{
 
 		Real gamma = 0.005;
 
-		PhaseFieldKernels::ApplyGravity(vel, Coord(0, -0.5, 0.0), dt);
+		PhaseFieldKernels<TDataType>::ApplyGravity(vel, Coord(0, -0.5, 0.0), dt);
 
-		PhaseFieldKernels::InterpolateVelocity(vel_u, vel_v, vel_w, vel);
+		PhaseFieldKernels<TDataType>::InterpolateVelocity(vel_u, vel_v, vel_w, vel);
 
-		PhaseFieldKernels::SetU(vel_u);
-		PhaseFieldKernels::SetV(vel_v);
-		PhaseFieldKernels::SetW(vel_w);
+		PhaseFieldKernels<TDataType>::SetU(vel_u);
+		PhaseFieldKernels<TDataType>::SetV(vel_v);
+		PhaseFieldKernels<TDataType>::SetW(vel_w);
 
-		PhaseFieldKernels::PrepareForProjection(vel_u, vel_v, vel_w, mat, RHS, mass, h, dt);
+		PhaseFieldKernels<TDataType>::PrepareForProjection(vel_u, vel_v, vel_w, mat, RHS, mass, h, dt);
 		for (int i = 0; i < 20; i++)
 		{
-			PhaseFieldKernels::Projection(pressure, mb0, mat, RHS, 1);
+			PhaseFieldKernels<TDataType>::Projection(pressure, mb0, mat, RHS, 1);
 		}
-		PhaseFieldKernels::UpdateVelocity(vel_u, vel_v, vel_w, pressure, mass, h, dt);
+		PhaseFieldKernels<TDataType>::UpdateVelocity(vel_u, vel_v, vel_w, pressure, mass, h, dt);
 		// 
-		PhaseFieldKernels::InterpolateVelocity(vel, vel_u, vel_v, vel_w);
+		PhaseFieldKernels<TDataType>::InterpolateVelocity(vel, vel_u, vel_v, vel_w);
 
 		//Advect
 		mb0.assign(mass);
-		PhaseFieldKernels::AdvectForward(mass, mb0, vel, dt);
+		PhaseFieldKernels<TDataType>::AdvectForward(mass, mb0, vel, dt);
 
 		velBuf.assign(vel);
 		velSrc.assign(vel);
-		PhaseFieldKernels::AdvectBackward(vel, velBuf, velSrc, dt);
+		PhaseFieldKernels<TDataType>::AdvectBackward(vel, velBuf, velSrc, dt);
 
 		//Sharpening
 		mb0.assign(mass);
-		PhaseFieldKernels::Sharpening(mass, dir, mb0, vel_u, vel_v, vel_w, omega, gamma, h, dt);
+		PhaseFieldKernels<TDataType>::Sharpening(mass, dir, mb0, vel_u, vel_v, vel_w, omega, gamma, h, dt);
 
 		mb0.assign(mass);
 		float a = 1.0f * gamma / h / h * dt;// dt;
-		PhaseFieldKernels::Jacobi(mass, mb0, mb1, vel, a, 1.0f + 6.0f * a, 10);
+		PhaseFieldKernels<TDataType>::Jacobi(mass, mb0, mb1, vel, a, 1.0f + 6.0f * a, 10);
 	}
 
 	DEFINE_CLASS(TwoPhaseFlow);
