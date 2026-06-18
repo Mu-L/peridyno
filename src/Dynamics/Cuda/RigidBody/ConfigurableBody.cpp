@@ -568,7 +568,7 @@ namespace dyno
 				if (type == JOINT_Hinge)
 				{
 					auto& hingeJoint = this->createHingeJoint(Actors[first], Actors[second]);
-					hingeJoint.setAnchorPoint(relative ? (Actors[first]->center + anchorOffset) : anchorOffset);
+					hingeJoint.setAnchorPoint(relative ? (Actors[first]->center + anchorOffset) : anchorOffset + instance.translation());
 					hingeJoint.setAxis(axis);
 					if (jointDetail.varUseMoter()->getValue())
 						hingeJoint.setMoter(speed);
@@ -579,7 +579,7 @@ namespace dyno
 				if (type == JOINT_Slider)
 				{
 					auto& sliderJoint = this->createSliderJoint(Actors[first], Actors[second]);
-					sliderJoint.setAnchorPoint((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset);
+					sliderJoint.setAnchorPoint(relative ? ((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset) : anchorOffset + instance.translation());
 					sliderJoint.setAxis(axis);
 					if (jointDetail.varUseMoter()->getValue())
 						sliderJoint.setMoter(speed);
@@ -589,17 +589,17 @@ namespace dyno
 				if (type == JOINT_Fixed)
 				{
 					auto& fixedJoint1 = this->createFixedJoint(Actors[first], Actors[second]);
-					fixedJoint1.setAnchorPoint((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset);
+					fixedJoint1.setAnchorPoint(relative ? ((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset) : anchorOffset + instance.translation());
 				}
 				if (type == JOINT_Point)
 				{
 					auto& pointJoint = this->createPointJoint(Actors[first]);
-					pointJoint.setAnchorPoint(Actors[first]->center + anchorOffset);
+					pointJoint.setAnchorPoint(relative ? (Actors[first]->center + anchorOffset) : anchorOffset + instance.translation());
 				}
 				if (type == JOINT_BallAndSocket)
 				{
 					auto& ballAndSocketJoint = this->createBallAndSocketJoint(Actors[first], Actors[second]);
-					ballAndSocketJoint.setAnchorPoint((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset);
+					ballAndSocketJoint.setAnchorPoint(relative ? ((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset) : anchorOffset + instance.translation());
 				}
 			}
 		}
