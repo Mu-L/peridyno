@@ -41,8 +41,22 @@ namespace dyno
 
 		DEF_ARRAY_OUT(Vec3f, Bitangent, DeviceType::GPU, "");
 
+		DEF_ARRAY_OUT(Vec3f, NormalLOD1, DeviceType::GPU, "");
+
+		DEF_ARRAY_OUT(Vec3f, TangentLOD1, DeviceType::GPU, "");
+
+		DEF_ARRAY_OUT(Vec3f, BitangentLOD1, DeviceType::GPU, "");
+
+		DEF_ARRAY_OUT(Vec3f, NormalLOD2, DeviceType::GPU, "");
+
+		DEF_ARRAY_OUT(Vec3f, TangentLOD2, DeviceType::GPU, "");
+
+		DEF_ARRAY_OUT(Vec3f, BitangentLOD2, DeviceType::GPU, "");
+
 	protected:
 		void compute() override;
+
+		void computeTangent(int level);
 
 	private:
 	};

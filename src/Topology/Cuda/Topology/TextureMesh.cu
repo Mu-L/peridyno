@@ -19,6 +19,34 @@ namespace dyno
 		return mMeshData;
 	}
 
+	std::shared_ptr<Geometry>& TextureMesh::lodGeometry(int level)
+	{
+		if (level == 0)
+			return geometry();
+		else if (level == 1)
+		{
+			if (!mLod1)
+				mLod1 = std::make_shared<Geometry>();
+			return mLod1;
+		}
+		else if (level == 2)
+		{
+			if (!mLod2)
+				mLod2 = std::make_shared<Geometry>();
+			return mLod2;
+		}
+	}
+
+	std::vector<std::shared_ptr<Shape>>& TextureMesh::lodShapes(int level) 
+	{
+		if (level == 0)
+			return mShapes;
+		if (level == 1)
+			return mLod1Shapes;
+		if (level == 2)
+			return mLod2Shapes;
+	}
+
 	void TextureMesh::safeConvert2TriangleSet(TriangleSet<DataType3f>& triangleSet)
 	{
 		triangleSet.setPoints(this->geometry()->vertices());
@@ -286,21 +314,24 @@ namespace dyno
 	}
 
 
-	std::vector<Vec3f> TextureMesh::updateTexMeshBoundingBox()
+	std::vector<Vec3f> TextureMesh::updateTexMeshBoundingBox(int level)
 	{
 		std::vector<Vec3f> c_shapeCenter;
 		c_shapeCenter.resize(this->shapes().size());
+		std::shared_ptr<Geometry>& geometry = this->lodGeometry(level);
+		std::vector<std::shared_ptr<Shape>>& lodshapes = this->lodShapes(level);
+
 		//counter
 		for (uint i = 0; i < this->shapes().size(); i++)
 		{
 			DArray<int> counter;
-			counter.resize(this->geometry()->vertices().size());
+			counter.resize(geometry->vertices().size());
 
 
-			cuExecute(this->geometry()->vertices().size(),
+			cuExecute(geometry->vertices().size(),
 				C_Shape_PointCounter,
 				counter,
-				this->geometry()->shapeIds(),
+				geometry->shapeIds(),
 				i
 			);
 
@@ -313,24 +344,24 @@ namespace dyno
 			Scan<int> scan;
 			scan.exclusive(counter.begin(), counter.size());
 
-			cuExecute(this->geometry()->vertices().size(),
+			cuExecute(geometry->vertices().size(),
 				C_SetupPoints,
 				targetPoints,
-				this->geometry()->vertices(),
+				geometry->vertices(),
 				counter
 			);
 
 
 			Reduction<Vec3f> reduceBounding;
 
-			auto& bounding = this->shapes()[i]->boundingBox;
+			auto& bounding = lodshapes[i]->boundingBox;
 			Vec3f lo = reduceBounding.minimum(targetPoints.begin(), targetPoints.size());
 			Vec3f hi = reduceBounding.maximum(targetPoints.begin(), targetPoints.size());
 
 			//updateBoundingBox
 			bounding.v0 = lo;
 			bounding.v1 = hi;
-			this->shapes()[i]->boundingTransform.translation() = (lo + hi) / 2;
+			lodshapes[i]->boundingTransform.translation() = (lo + hi) / 2;
 
 			c_shapeCenter[i] = (lo + hi) / 2;
 
@@ -340,6 +371,11 @@ namespace dyno
 
 		}
 		return c_shapeCenter;
+	}
+
+	const bool TextureMesh::useLod()
+	{
+		return mMeshData && mLod1 && mLod2 && mShapes.size() && mLod1Shapes.size() && mLod2Shapes.size();
 	}
 
 	template<typename Vec3f>

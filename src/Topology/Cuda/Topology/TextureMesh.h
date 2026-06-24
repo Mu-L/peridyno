@@ -133,6 +133,10 @@ namespace dyno
 
 		std::vector<std::shared_ptr<Shape>>& shapes() { return mShapes; }
 
+		std::shared_ptr<Geometry>& lodGeometry(int level = 1);
+
+		std::vector<std::shared_ptr<Shape>>& lodShapes(int level = 1);
+
 		void merge(const std::shared_ptr<TextureMesh> texMesh01, const std::shared_ptr<TextureMesh> texMesh02);
 
 		void clear();
@@ -141,7 +145,9 @@ namespace dyno
 
 		void convert2TriangleSet(TriangleSet<DataType3f>& triangleSet);
 
-		std::vector<Vec3f> updateTexMeshBoundingBox();
+		std::vector<Vec3f> updateTexMeshBoundingBox(int level = 0);
+
+		const bool useLod();
 
 		template<typename Vec3f>
 		void transPoint2Vertices(
@@ -149,10 +155,52 @@ namespace dyno
 			DArray<Vec3f>& vAttribute,
 			DArrayList<int>& contactList
 		);
+		void setLodDistance(int level, float d) 
+		{
+			switch (level)
+			{
+			case 0:
+				break;
+			case 1:
+				mDistanceLod1 = d;
+				break;
+			case 2:
+				mDistanceLod2 = d;
+			default:
+				break;
+			}
+		}
+
+		int getLodDistance(int level) 
+		{
+			switch (level)
+			{
+			case 0:
+				return 0;
+				break;
+			case 1:
+				return mDistanceLod1;
+				break;
+			case 2:
+				return mDistanceLod2;
+				break;
+			default:
+				break;
+			}
+		}
 
 	private:
 		std::shared_ptr<Geometry> mMeshData = NULL;
 		std::vector<std::shared_ptr<Shape>> mShapes;
+
+		std::shared_ptr<Geometry> mLod1 = NULL;
+		std::vector<std::shared_ptr<Shape>> mLod1Shapes;
+		float mDistanceLod1 = 1;
+
+		std::shared_ptr<Geometry> mLod2 = NULL;
+		std::vector<std::shared_ptr<Shape>> mLod2Shapes;
+		float mDistanceLod2 = 3;
+
 	};
 
 	

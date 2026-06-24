@@ -102,6 +102,13 @@ namespace dyno
 #ifdef CUDA_BACKEND
 		mTangent.create(GL_SHADER_STORAGE_BUFFER, GL_DYNAMIC_DRAW);
 		mBitangent.create(GL_SHADER_STORAGE_BUFFER, GL_DYNAMIC_DRAW);
+
+		mTangentLOD1.create(GL_SHADER_STORAGE_BUFFER, GL_DYNAMIC_DRAW);
+		mBitangentLOD1.create(GL_SHADER_STORAGE_BUFFER, GL_DYNAMIC_DRAW);
+
+		mTangentLOD2.create(GL_SHADER_STORAGE_BUFFER, GL_DYNAMIC_DRAW);
+		mBitangentLOD2.create(GL_SHADER_STORAGE_BUFFER, GL_DYNAMIC_DRAW);
+
 #endif
 
 		mShapeTransform.create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
@@ -116,6 +123,12 @@ namespace dyno
 
 		mTangent.release();
 		mBitangent.release();
+
+		mTangentLOD1.release();
+		mBitangentLOD1.release();
+
+		mTangentLOD2.release();
+		mBitangentLOD2.release();
 
 		mRenderParamsUBlock.release();
 		mPBRMaterialUBlock.release();
@@ -133,6 +146,12 @@ namespace dyno
 		{
 			mTangent.updateGL();
 			mBitangent.updateGL();
+
+			mTangentLOD1.updateGL();
+			mBitangentLOD1.updateGL();
+
+			mTangentLOD2.updateGL();
+			mBitangentLOD2.updateGL();
 
 			mShapeTransform.updateGL();
 
@@ -164,6 +183,13 @@ namespace dyno
 		{
 			mTangent.load(mTangentSpaceConstructor->outTangent()->constData());
 			mBitangent.load(mTangentSpaceConstructor->outBitangent()->constData());
+
+			mTangentLOD1.load(mTangentSpaceConstructor->outTangentLOD1()->constData());
+			mBitangentLOD1.load(mTangentSpaceConstructor->outBitangentLOD1()->constData());
+
+			mTangentLOD2.load(mTangentSpaceConstructor->outTangentLOD2()->constData());
+			mBitangentLOD2.load(mTangentSpaceConstructor->outBitangentLOD2()->constData());
+
 		}
 		
 #endif

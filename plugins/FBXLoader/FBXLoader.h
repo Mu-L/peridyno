@@ -56,6 +56,10 @@ namespace dyno
 		* @brief FBX file
 		*/
 		DEF_VAR(FilePath, FileName, "", "");
+		DEF_VAR(FilePath, LOD1, "", "");
+		DEF_VAR(FilePath, LOD2, "", "");
+
+
 		DEF_VAR(bool, ImportAnimation, true, "ImportAnimation");
 		//DEF_VAR(bool, RecalculateNormal, false, "RecalculateNormal");
 		//DEF_VAR(bool, FlipNormal, false, "FlipNormal");
@@ -83,6 +87,8 @@ namespace dyno
 	protected:
 
 		bool initFBX();
+
+		bool loadLOD(FilePath filePath,int level = 1);
 
 		void varAnimationChange();
 

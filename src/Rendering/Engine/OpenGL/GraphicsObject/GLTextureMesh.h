@@ -95,6 +95,15 @@ namespace dyno
 
 #ifdef CUDA_BACKEND
 		void load(const std::shared_ptr<TextureMesh> mesh);
+		void loadMesh(
+			const std::shared_ptr<TextureMesh> mesh,
+			XBuffer<Vec3f>& mVertices, 
+			XBuffer<Vec3f>& mNormal, 
+			XBuffer<Vec2f>& mTexCoord, 
+			std::vector<std::shared_ptr<GLShape>>& mShapes,
+			int level = 0
+		);
+
 #endif
 
 		void updateGL();
@@ -105,12 +114,27 @@ namespace dyno
 
 		inline std::vector<std::shared_ptr<GLShape>>& shapes() { return mShapes; }
 
+		XBuffer<Vec3f>& verticesLOD(int level);
+		XBuffer<Vec3f>& normalsLOD(int level);
+		XBuffer<Vec2f>& texCoordsLOD(int level);
+		std::vector<std::shared_ptr<GLShape>>& shapesLOD(int level);
+
 	private:
 		XBuffer<Vec3f> mVertices;
 		XBuffer<Vec3f> mNormal;
 		XBuffer<Vec2f> mTexCoord;
-
 		std::vector<std::shared_ptr<GLShape>> mShapes;
+
+		XBuffer<Vec3f> mVertices_LOD1;
+		XBuffer<Vec3f> mNormal_LOD1;
+		XBuffer<Vec2f> mTexCoord_LOD1;
+		std::vector<std::shared_ptr<GLShape>> mShapes_LOD1;
+
+		XBuffer<Vec3f> mVertices_LOD2;
+		XBuffer<Vec3f> mNormal_LOD2;
+		XBuffer<Vec2f> mTexCoord_LOD2;
+		std::vector<std::shared_ptr<GLShape>> mShapes_LOD2;
+
 
 		bool mInitialized = false;
 	};
