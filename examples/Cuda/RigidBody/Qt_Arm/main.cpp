@@ -36,9 +36,9 @@ std::shared_ptr<SceneGraph> creatArm()
 	arm->varLocation()->setValue(Vec3f(0, 0.3, 0));
 	arm->varVehiclesTransform()->clear();
 
-	for (size_t i = 0; i < 10; i++)
+	for (size_t i = 0; i < 700; i++)
 	{
-		int rowElementNum = 15;
+		int rowElementNum = 28;
 		arm->varVehiclesTransform()->pushBack(Transform3f(Vec3f(float(i)*1.2f/(float)rowElementNum,0, (float)(i%rowElementNum) * 1.2),Mat3f::identityMatrix()));
 	}
 
@@ -100,8 +100,6 @@ std::shared_ptr<SceneGraph> creatArm()
 	auto rigid0 = dynamic_cast<TFTuple<RigidBodyTuple>*>(field0);
 	if(rigid0)
 		rigid0->constDataPtr()->varMotionType()->setCurrentKey(RigidMotionType::RIGID_Static);
-
-	
 
 
 	float vScale = 0.01;
