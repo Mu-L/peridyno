@@ -241,35 +241,6 @@ namespace dyno
 			if (showImGUI())
 				mImWindow.draw(this);
 
-			// 			// Draw widgets
-			// 			// TODO: maybe move into mImWindow...
-			// 			for (auto widget : mWidgets)
-			// 			{
-			// 				widget->update();
-			// 				widget->paint();
-			// 			}
-
-			// 			// draw a pick rect
-			// 			if (mButtonType == GLFW_MOUSE_BUTTON_LEFT &&
-			// 				mButtonAction == GLFW_PRESS &&
-			// 				mButtonMode == 0 &&
-			// 				!ImGuizmo::IsUsing() &&
-			// 				!ImGui::GetIO().WantCaptureMouse) {
-			// 				double xpos, ypos;
-			// 				glfwGetCursorPos(mWindow, &xpos, &ypos);
-			//
-			// 				ImVec2 pMin = { fminf(xpos, mCursorPosX), fminf(ypos, mCursorPosY) };
-			// 				ImVec2 pMax = { fmaxf(xpos, mCursorPosX), fmaxf(ypos, mCursorPosY) };
-			//
-			// 				// visible rectangle
-			// 				if (pMin.x != pMax.x || pMin.y != pMax.y) {
-			// 					// fill
-			// 					ImGui::GetBackgroundDrawList()->AddRectFilled(pMin, pMax, ImColor{ 0.2f, 0.2f, 0.2f, 0.5f });
-			// 					// border
-			// 					ImGui::GetBackgroundDrawList()->AddRect(pMin, pMax, ImColor{ 0.8f, 0.8f, 0.8f, 0.8f }, 0, 0, 1.5f);
-			// 				}
-			// 			}
-
 			ImGui::Render();
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

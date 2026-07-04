@@ -306,7 +306,7 @@ namespace dyno
 		mRenderItems = items;
 	}
 
-	void GLRenderEngine::draw(dyno::SceneGraph* scene, const RenderParams& rparams)
+	void GLRenderEngine::draw(dyno::SceneGraph* scene, const RenderParams& rparams, Vec2i p)
 	{
 		updateRenderItems(scene);
 

@@ -21,6 +21,9 @@ layout(std140, binding = 0) uniform RenderParams
 	int height;
 	int index;
 	int mode;
+
+	int groundPlaneAxis;
+
 	float scale;
 
 } uRenderParams;
