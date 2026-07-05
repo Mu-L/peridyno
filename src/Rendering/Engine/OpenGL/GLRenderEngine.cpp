@@ -461,7 +461,7 @@ namespace dyno
 			if (bEnableFXAA)
 			{
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-				glViewport(0, 0, rparams.width, rparams.height);
+				glViewport(p.x, p.y, rparams.width, rparams.height);
 
 				mColorTex.bind(GL_TEXTURE1);
 				mDepthTex.bind(GL_TEXTURE2);
@@ -473,7 +473,7 @@ namespace dyno
 				glReadBuffer(GL_COLOR_ATTACHMENT0);
 				glBlitFramebuffer(
 					0, 0, rparams.width, rparams.height,
-					0, 0, rparams.width, rparams.height,
+					p.x, p.y, p.x + rparams.width, p.y + rparams.height,
 					GL_COLOR_BUFFER_BIT, GL_LINEAR);
 			}
 		}
