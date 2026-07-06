@@ -417,22 +417,24 @@ namespace dyno
 				
 				Actors[i] = this->createRigidBody(rigidbody);
 
-				for (auto elementIterator = rigid.varShapeConfigs()->begin(); elementIterator != rigid.varShapeConfigs()->end(); elementIterator++)
+				if (rigid.varShapeConfigs()->size()) 
 				{
-					auto element = rigid.varShapeConfigs()->getElement(elementIterator);
-					Vec3f up;
-					Vec3f down;
-					Vec3f T;
-
-					if (visualShapePtr)
+					for (auto elementIterator = rigid.varShapeConfigs()->begin(); elementIterator != rigid.varShapeConfigs()->end(); elementIterator++)
 					{
-						up = visualShapePtr->boundingBox.v1;
-						down = visualShapePtr->boundingBox.v0;
-						T = visualShapePtr->boundingTransform.translation();
-					}
+						auto element = rigid.varShapeConfigs()->getElement(elementIterator);
+						Vec3f up;
+						Vec3f down;
+						Vec3f T;
 
-					switch (element.varShapeType()->currentKey())
-					{
+						if (visualShapePtr)
+						{
+							up = visualShapePtr->boundingBox.v1;
+							down = visualShapePtr->boundingBox.v0;
+							T = visualShapePtr->boundingTransform.translation();
+						}
+
+						switch (element.varShapeType()->currentKey())
+						{
 						case SHAPE_BOX:
 						{
 							BoxInfo currentBox;
@@ -448,7 +450,7 @@ namespace dyno
 						}
 
 						break;
-						case SHAPE_TET: 
+						case SHAPE_TET:
 						{
 							TetInfo currentTet;
 							float Length = 0;
@@ -456,9 +458,9 @@ namespace dyno
 							{
 								auto tetCord = element.varTet()->getElement(tetIterator);
 								Length += tetCord.norm();
-							}	
+							}
 
-							if(Length == 0 )
+							if (Length == 0)
 							{
 								std::vector<Vector<Real, 3>> v[4];
 								currentTet.v[0] = (visualShapePtr ? down : Vec3f(0));
@@ -466,7 +468,7 @@ namespace dyno
 								currentTet.v[2] = (visualShapePtr ? Vec3f(up.x, down.y, up.z) : Vec3f(0, 1, 0));
 								currentTet.v[3] = (visualShapePtr ? Vec3f(up) : Vec3f(0, 0, 1));
 							}
-							else if(Length > 0)
+							else if (Length > 0)
 							{
 								int tetId = 0;
 								for (auto tetIterator = element.varTet()->begin(); tetIterator != element.varTet()->end(); tetIterator++)
@@ -491,11 +493,11 @@ namespace dyno
 								currentCapsule.halfLength = element.varCapsuleLength()->getValue();
 								currentCapsule.radius = element.varRadius()->getValue();
 							}
-							else 
+							else
 							{
 								if (element.varCapsuleLength()->getValue() == 0 && visualShapePtr)
 									currentCapsule.halfLength = (up.y - down.y) / 2;
-								else if(element.varCapsuleLength()->getValue() != 0)
+								else if (element.varCapsuleLength()->getValue() != 0)
 									currentCapsule.halfLength = element.varCapsuleLength()->getValue();
 
 								if (element.varRadius()->getValue() == 0 && visualShapePtr)
@@ -507,7 +509,7 @@ namespace dyno
 							this->bindCapsule(Actors[i], currentCapsule, element.varDensity()->getValue());
 							break;
 						}
-						case SHAPE_SPHERE: 
+						case SHAPE_SPHERE:
 						{
 							SphereInfo currentSphere;
 							currentSphere.center = element.varCenter()->getValue();
@@ -516,7 +518,7 @@ namespace dyno
 							{
 								currentSphere.radius = std::abs(up.y - down.y) / 2;
 							}
-							else 
+							else
 							{
 								currentSphere.radius = element.varRadius()->getValue();
 							}
@@ -525,14 +527,23 @@ namespace dyno
 						}
 						default:
 							break;
+						}
 					}
 				}
+				//else 
+				//{
+				//	BoxInfo currentBox;
+				//	currentBox.halfLength = Vec3f(0.1);
+				//	this->bindBox(Actors[i], currentBox, 100);
+				//}
 
-				if (visualId!= -1 && Actors[i] != NULL)
-				{
-					////bindShapetoActor
-					this->bindShape(Actors[i], Pair<uint, uint>(visualId, j));
-				}
+				//
+
+				//if (visualId!= -1 && Actors[i] != NULL)
+				//{
+				//	////bindShapetoActor
+				//	this->bindShape(Actors[i], Pair<uint, uint>(visualId, j));
+				//}
 			}
 
 			auto jointInfo = config.varJointConfigs();

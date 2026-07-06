@@ -349,13 +349,13 @@ namespace dyno
 					if (f_textureMesh)
 					{
 						renderWidget->addField(f_textureMesh);
+						repaintWidget();
 					}
 				}
 			}
 		}
 
 		connect(PSimulationThread::instance(), &PSimulationThread::sceneGraphChanged, this, &QWidget::close);
-
 
 	}
 

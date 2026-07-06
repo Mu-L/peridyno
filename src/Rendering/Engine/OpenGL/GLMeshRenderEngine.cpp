@@ -92,6 +92,14 @@ namespace dyno
 
 	}
 
+	void GLMeshRenderEngine::addNode(std::shared_ptr<Node> node)
+	{
+		if (!renderSceneGraph)
+			renderSceneGraph = std::make_shared<SceneGraph>();
+
+		renderSceneGraph->addNode(node);
+	}
+
 
 	std::string GLMeshRenderEngine::name() const
 	{

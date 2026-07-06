@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.10)
 
 set(PERIDYNO_INCLUDE_PATH ${CMAKE_BINARY_DIR}/include CACHE STRING "include path in binary directory" FORCE)
 set(PERIDYNO_LIB_CMAKES "")
@@ -18,6 +18,7 @@ add_subdirectory(Rendering)
 if("${PERIDYNO_GPU_BACKEND}" STREQUAL "CUDA")
     add_subdirectory(Interaction)
     add_subdirectory(Modeling)
+    add_subdirectory(RigidBodyGUI)
 endif()
 
 add_subdirectory(Dynamics)

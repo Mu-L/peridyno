@@ -27,7 +27,7 @@
 #include "Field/FilePath.h"
 #include "Topology/SkinInfo.h"
 #include "Topology/JointInfo.h"
-
+#include "Topology/TextureMeshInterface.h"
 
 namespace dyno
 {
@@ -61,7 +61,7 @@ namespace dyno
 
 
 	template<typename TDataType>
-	class GltfLoader : virtual public ParametricModel<TDataType>
+	class GltfLoader : virtual public ParametricModel<TDataType>, public TextureMeshInterface
 	{
 		DECLARE_TCLASS(GltfLoader, TDataType);
 
@@ -115,6 +115,10 @@ namespace dyno
 		//DEF_INSTANCE_STATE(EdgeSet<TDataType>, JointSet, "");
 
 		DEF_INSTANCE_STATE(JointAnimationInfo, Animation,"");
+
+	public:
+		
+		virtual FInstance<TextureMesh>* getTextureMesh()override { return this->stateTextureMesh(); }
 
 	protected:
 		void resetStates() override

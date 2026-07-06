@@ -62,7 +62,8 @@ namespace dyno {
 		const std::string getClassName() final { return "FInstance"; }
 
 		std::shared_ptr<T> getDataPtr() {
-			InstanceBase* ins = dynamic_cast<InstanceBase*>(this->getTopField());
+			auto ptr = this->getTopField();
+			InstanceBase* ins = dynamic_cast<InstanceBase*>(ptr);
 			std::shared_ptr<T> data = std::static_pointer_cast<T>(ins->objectPointer());
 
 			this->tick();

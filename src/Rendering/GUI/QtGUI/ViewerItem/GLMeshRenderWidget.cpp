@@ -10,6 +10,7 @@
 #include "GLMeshRenderEngine.h"
 #include "GLShapeRender.h"
 #include "SceneGraph.h"
+#include "Action.h"
 
 namespace dyno
 {
@@ -195,5 +196,23 @@ namespace dyno
 		mGLInitialized = false;
 	}
 
+	void GLMeshRenderWidget::onNodeUpdated(std::shared_ptr<Node> node)
+	{
+		auto scn = mRenderEngine->renderSceneGraph;
+
+		//When a node is updated, its descendants will be updated according to isAutoSync()
+		class AutoSyncAct : public Action
+		{
+		public:
+			void process(Node* node) override {
+				node->reset();
+				node->updateGraphicsContext();
+			}
+		};
+
+		scn->traverseForwardWithAutoSync<AutoSyncAct>(node);
+
+		this->update();
+	}
 
 }

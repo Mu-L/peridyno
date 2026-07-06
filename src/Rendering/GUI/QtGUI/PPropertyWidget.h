@@ -21,6 +21,7 @@
 #include <QWidget>
 #include <typeinfo>
 #include <memory>
+#include "QtGUI/Common.h"
 
 
 class QVBoxLayout;
@@ -41,7 +42,7 @@ namespace dyno
 	class FTuple;
 	class Module;
 
-	class PPropertyWidget : public QWidget
+	class PERIDYNO_QTGUI_API PPropertyWidget : public QWidget
 	{
 		Q_OBJECT
 	public:
@@ -85,14 +86,15 @@ namespace dyno
 		static QWidget* createFieldWidget(FBase* field);
 
 		static std::map<std::string, FieldWidgetMeta> tempGetMeta() { return sFieldWidgetMeta; };
+
+		QWidget* addVariableFieldWidget(FBase* field, QGridLayout* layout = nullptr);
+
 	private:
 		static std::map<std::string, FieldWidgetMeta> sFieldWidgetMeta;
 
 		QWidget* addScalarFieldWidget(FBase* field, QGridLayout* layout = nullptr);
 		QWidget* addTupleFieldWidget(FTuple* field, QGridLayout* layout = nullptr);
 		QWidget* addListFieldWidget(FList* field, QGridLayout* layout = nullptr);
-
-		QWidget* addVariableFieldWidget(FBase* field, QGridLayout* layout = nullptr);
 
 		void addStateFieldWidget(FBase* field);
 

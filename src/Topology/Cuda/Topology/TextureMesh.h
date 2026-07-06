@@ -74,6 +74,23 @@ namespace dyno
 			texCoordIndex.clear();
 			material = nullptr;
 		}
+
+
+		void assign(std::shared_ptr<Shape> dataPtr)
+		{
+			if (dataPtr)
+			{
+				vertexIndex.assign(dataPtr->vertexIndex);
+				normalIndex.assign(dataPtr->normalIndex);
+				texCoordIndex.assign(dataPtr->texCoordIndex);
+
+				boundingBox = dataPtr->boundingBox;
+				boundingTransform = dataPtr->boundingTransform;
+
+				material = dataPtr->material;
+			}
+		}
+
 		DArray<Topology::Triangle> vertexIndex;
 		DArray<Topology::Triangle> normalIndex;
 		DArray<Topology::Triangle> texCoordIndex;
@@ -91,7 +108,18 @@ namespace dyno
 	public:
 		Geometry() {};
 		~Geometry() { clear(); };
-
+		Geometry(Geometry&& other) noexcept {
+			mVertices.assign(other.vertices());
+			mNormals.assign(other.normals());
+			mTexCoords.assign(other.texCoords());
+			mShapeIds.assign(other.shapeIds());
+		}
+		Geometry& operator=(Geometry&& other) noexcept {
+			mVertices.assign(other.vertices());
+			mNormals.assign(other.normals());
+			mTexCoords.assign(other.texCoords());
+			mShapeIds.assign(other.shapeIds());
+		}
 		void clear() 
 		{
 			mVertices.clear();
@@ -187,6 +215,44 @@ namespace dyno
 			default:
 				break;
 			}
+		}
+
+		void assign(std::shared_ptr<TextureMesh> other)
+		{
+
+			auto s = std::shared_ptr<Geometry>(new Geometry());
+			mMeshData.reset();
+			mMeshData = std::shared_ptr<Geometry>(new Geometry());
+			mMeshData->assign(other->geometry());
+
+			mShapes.resize(other->shapes().size());
+			for (size_t i = 0; i < mShapes.size(); i++)
+			{
+				mShapes[i] = std::make_shared<Shape>();
+				mShapes[i]->assign(other->shapes()[i]);
+			}
+
+			mLod1 = std::make_shared<Geometry>();
+			mLod1->assign(other->lodGeometry(1));
+
+			mLod1Shapes.resize(other->lodShapes(1).size());
+			for (size_t i = 0; i < mLod1Shapes.size(); i++)
+			{
+				mLod1Shapes[i] = std::make_shared<Shape>();
+				mLod1Shapes[i]->assign(other->lodShapes(1)[i]);
+			}
+			mDistanceLod1 = other->getLodDistance(1);
+
+			mLod2 = std::make_shared<Geometry>();
+			mLod2->assign(other->lodGeometry(2));
+
+			mLod2Shapes.resize(other->lodShapes(2).size());
+			for (size_t i = 0; i < mLod2Shapes.size(); i++)
+			{
+				mLod2Shapes[i] = std::make_shared<Shape>();
+				mLod2Shapes[i]->assign(other->lodShapes(2)[i]);
+			}
+			mDistanceLod1 = other->getLodDistance(2);
 		}
 
 	private:

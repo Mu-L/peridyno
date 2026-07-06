@@ -98,7 +98,7 @@ namespace dyno
 		};
 
 		//Shape:
-		DEF_ENUM(RigidShapeType, ShapeType, RigidShapeType::SHAPE_CAPSULE, "");
+		DEF_ENUM(RigidShapeType, ShapeType, RigidShapeType::SHAPE_BOX, "");
 		DEF_VAR(Vec3f, Center, Vec3f(0.0f, 0.0f, 0.0f), "");
 		DEF_VAR(Quat<Real>, Rot, Quat<Real>(), "");
 		DEF_VAR(Real, Density, 0.0f, "");

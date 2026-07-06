@@ -57,12 +57,19 @@ namespace dyno
 		void setTexMeshShapesID(std::vector<uint> shapes);
 
 		void addField(FBase* field) { mRenderEngine->addField(field); }
+		void addNode(std::shared_ptr<Node> node) { mRenderEngine->addNode(node); }
+		void resetScene() { mRenderEngine->resetScene(); }
 
 	public slots:
 		void setTransparency(bool t)
 		{
 			mTransparency = t;
 		};
+
+	public slots:
+
+		void onNodeUpdated(std::shared_ptr<Node> node);
+
 
 	protected:
 		void initializeGL() override ;

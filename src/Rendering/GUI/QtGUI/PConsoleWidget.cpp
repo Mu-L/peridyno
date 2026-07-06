@@ -1,4 +1,4 @@
-﻿#include "PConsoleWidget.h"
+#include "PConsoleWidget.h"
 #include "Platform.h"
 #include <QListWidget>
 #include <QDir>
@@ -7,6 +7,10 @@
 #include <QListView>
 #include <QPixmap>
 #include <QMenu>
+#include <QMessageBox>
+#include <QFileDialog>
+#include <algorithm>
+#include <cctype>
 #include "NodeFactory.h"
 
 #include "PSimulationThread.h"
@@ -455,6 +459,9 @@ namespace dyno
 
 		connect(listView, SIGNAL(doubleClicked(const QModelIndex&)),
 			this, SLOT(assetDoubleClicked(const QModelIndex&)));
+
+		listView->setContextMenuPolicy(Qt::CustomContextMenu);
+		connect(listView, &QWidget::customContextMenuRequested, this, &QContentBrowser::showContextMenu);
 	}
 
 	void QContentBrowser::treeItemSelected(const QModelIndex& index)
@@ -485,23 +492,87 @@ namespace dyno
 	}
 
 	void QContentBrowser::assetDoubleClicked(const QModelIndex& index)
+{
+	QString name = model->fileName(index);
+	QString path = model->fileInfo(index).absolutePath() + "/" + name;
+
+	std::cout << path.toStdString() << "\n";
+
+	auto ext = model->fileInfo(index).suffix().toStdString();
+	auto ext2Act = NodeFactory::instance()->nodeContentActions();
+	if (ext2Act.find(ext) != ext2Act.end())
 	{
-		QString name = model->fileName(index);
-		QString path = model->fileInfo(index).absolutePath() + "/" + name;
+		auto func = ext2Act[ext];
+		if (func != nullptr) {
+			auto node = func(path.toStdString());
 
-		std::cout << path.toStdString() << "\n";
-
-		auto ext = model->fileInfo(index).suffix().toStdString();
-		auto ext2Act = NodeFactory::instance()->nodeContentActions();
-		if (ext2Act.find(ext) != ext2Act.end())
-		{
-			auto func = ext2Act[ext];
-			if (func != nullptr) {
-				auto node = func(path.toStdString());
-
-				emit nodeCreated(node);
-			}
+			emit nodeCreated(node);
 		}
 	}
+}
+
+void QContentBrowser::showContextMenu(const QPoint& pos)
+{
+	QModelIndex index = listView->indexAt(pos);
+	if (!index.isValid())
+		return;
+
+	mRightClickedIndex = index;
+
+	auto listModel = qobject_cast<QFileSystemModel*>(listView->model());
+	if (!listModel)
+		return;
+
+	std::string ext = listModel->fileInfo(index).suffix().toLower().toStdString();
+
+	QMenu menu(this);
+
+	// Built-in action: Add to Scene
+	menu.addAction("Add to Scene", this, &QContentBrowser::onAddToScene);
+
+	// Registered actions for this file extension
+	std::vector<std::string> keys;
+	keys.push_back(ext);
+	keys.push_back("*");
+	for (const std::string& key : keys)
+	{
+		auto it = sActionRegistry.find(key);
+		if (it == sActionRegistry.end())
+			continue;
+
+		for (const ContentBrowserAction& act : it->second)
+		{
+			QString filePath = listModel->fileInfo(index).absoluteFilePath();
+			QAction* action = menu.addAction(act.name);
+			QWidget* parentWidget = this;
+			ContentBrowserActionCallback cb = act.callback;
+			connect(action, &QAction::triggered, this, [cb, filePath, parentWidget]() {
+				cb(filePath, parentWidget);
+			});
+		}
+	}
+
+	menu.exec(listView->mapToGlobal(pos));
+}
+
+void QContentBrowser::onAddToScene()
+{
+	if (mRightClickedIndex.isValid())
+	{
+		assetDoubleClicked(mRightClickedIndex);
+	}
+}
+
+// Static member initialization
+std::map<std::string, std::vector<ContentBrowserAction>> QContentBrowser::sActionRegistry;
+
+void QContentBrowser::registerAction(const std::string& fileExt, const QString& actionName, ContentBrowserActionCallback callback)
+{
+	// Convert to lowercase
+	std::string lowerExt = fileExt;
+	std::transform(lowerExt.begin(), lowerExt.end(), lowerExt.begin(),
+		[](unsigned char c) { return std::tolower(c); });
+	sActionRegistry[lowerExt].push_back({ actionName, callback });
+}
 
 }

@@ -5,11 +5,17 @@
 #include <QFileSystemModel>
 #include <QTreeView>
 #include <QListView>
+#include <map>
+#include <vector>
+#include <string>
+#include <functional>
 
 #include <QTextEdit>
 #include <QPushButton>
 #include <QMessageBox>
 #include <memory>
+
+#include "Common.h"
 
 // Slots macro definition conflicts with Python
 #ifdef slots
@@ -94,11 +100,24 @@ namespace dyno
 {
 	class Node;
 
-	class QContentBrowser : public QWidget
+	// Callback type for context menu actions
+	using ContentBrowserActionCallback = std::function<void(const QString& filePath, QWidget* parent)>;
+
+	// Action entry registered by external libraries
+	struct ContentBrowserAction {
+		QString name;
+		ContentBrowserActionCallback callback;
+	};
+
+	class PERIDYNO_QTGUI_API QContentBrowser : public QWidget
 	{
 		Q_OBJECT
 	public:
 		explicit QContentBrowser(QWidget* parent = nullptr);
+
+		// Register an action for a specific file extension (e.g. "obj", "gltf", "*" for all).
+		// Multiple actions can be registered for the same extension.
+		static void registerAction(const std::string& fileExt, const QString& actionName, ContentBrowserActionCallback callback);
 
 	signals:
 
@@ -110,10 +129,20 @@ namespace dyno
 		void assetItemSelected(const QModelIndex& index);
 		void assetDoubleClicked(const QModelIndex& index);
 
+	private slots:
+		void showContextMenu(const QPoint& pos);
+		void onAddToScene();
+
 	private:
 		QFileSystemModel* model;
 		QTreeView* treeView;
 		QListView* listView;
+		QModelIndex mRightClickedIndex;
+
+		std::vector<std::shared_ptr<Node>> assetNode;
+
+		// Static action registry: fileExt -> list of actions
+		static std::map<std::string, std::vector<ContentBrowserAction>> sActionRegistry;
 	};
 }
 
