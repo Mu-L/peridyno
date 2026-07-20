@@ -25,10 +25,10 @@
 
 //ParticleSystem
 #include <ParticleSystem/SIUnifiedFluid/SemiImplicitUnifiedFluidSolver.h>
-#include <ParticleSystem/PdGhostUnifiedFluid.h>
 #include <ParticleSystem/MakeGhostParticles.h>
 #include <ParticleSystem/GhostFluid.h>
 #include <ParticleSystem/MakeParticleSystem.h>
+#include <ParticleSystem/GhostFluid.h>
 
 //Particle Emitter
 #include <ParticleSystem/Emitters/CircularEmitter.h>
@@ -93,9 +93,8 @@ std::shared_ptr<SceneGraph> createScene()
 
 	auto container = scn->addNode(std::make_shared<VolumeBoundary<DataType3f>>());
 
-	auto fluid = scn->addNode(std::make_shared<PdGhostUnifiedFluid<DataType3f>>());
+	auto fluid = scn->addNode(std::make_shared<GhostFluid<DataType3f>>());
 	Emitter->connect(fluid->importParticleEmitters());
-	//initialParticles->connect(fluid->importInitialStates());
 	GhostPoints1->connect(fluid->importBoundaryParticles());
 
 	fluid->animationPipeline()->clear();
