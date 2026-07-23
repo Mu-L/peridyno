@@ -150,189 +150,211 @@ namespace dyno
 		}
 	}
 
-    bool loadTextureMeshFromObj(std::shared_ptr<TextureMesh> texMesh, const FilePath& fullname, bool useToCenter)
-    {
-        tinyobj::attrib_t attrib;
-        std::vector<tinyobj::shape_t> shapes;
-        std::vector<tinyobj::material_t> materials;
-        std::string err, warn;
+	bool loadTextureMeshFromObj(std::shared_ptr<TextureMesh> texMesh, const FilePath& fullname, bool useToCenter)
+	{
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+		std::string err, warn;
 
-        auto name = fullname;
-        auto root = name.path().parent_path();
+		auto name = fullname;
+		auto root = name.path().parent_path();
 
-        bool result = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
-            name.string().c_str(), root.string().c_str());
+		bool result = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
+			name.string().c_str(), root.string().c_str());
 
-        if (!err.empty()) {
-            std::cerr << err << std::endl;
-            return false;
-        }
+		if (!err.empty()) {
+			std::cerr << err << std::endl;
+			return false;
+		}
 
-        if (!warn.empty()) {
-            std::cerr << warn << std::endl;
-        }
+		if (!warn.empty()) {
+			std::cerr << warn << std::endl;
+		}
 
-        std::vector<dyno::Vec3f> vertices;
-        std::vector<dyno::Vec3f> normals;
-        std::vector<dyno::Vec2f> texCoords;
-        std::vector<dyno::uint> shapeIds;
+		std::vector<dyno::Vec3f> vertices;
+		std::vector<dyno::Vec3f> normals;
+		std::vector<dyno::Vec2f> texCoords;
+		std::vector<dyno::uint> shapeIds;
 
-        for (int i = 0; i < attrib.vertices.size(); i += 3) {
-            vertices.push_back({ attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2] });
-        }
+		std::vector<dyno::Vec3i> pIndex;
+		std::vector<dyno::Vec3i> nIndex;
+		std::vector<dyno::Vec3i> tIndex;
 
-        for (int i = 0; i < attrib.normals.size(); i += 3) {
-            normals.push_back({ attrib.normals[i], attrib.normals[i + 1], attrib.normals[i + 2] });
-        }
+		for (int i = 0; i < attrib.vertices.size(); i += 3) {
+			vertices.push_back({ attrib.vertices[i], attrib.vertices[i + 1], attrib.vertices[i + 2] });
+		}
 
-        for (int i = 0; i < attrib.texcoords.size(); i += 2) {
-            texCoords.push_back({ attrib.texcoords[i], attrib.texcoords[i + 1] });
-        }
+		for (int i = 0; i < attrib.normals.size(); i += 3) {
+			normals.push_back({ attrib.normals[i], attrib.normals[i + 1], attrib.normals[i + 2] });
+		}
 
-        // 初始化 shapeIds
-        shapeIds.resize(vertices.size(), 0);
+		for (int i = 0; i < attrib.texcoords.size(); i += 2) {
+			texCoords.push_back({ attrib.texcoords[i], attrib.texcoords[i + 1] });
+		}
 
-        texMesh->geometry()->shapeIds().resize(vertices.size());
-        texMesh->geometry()->shapeIds().reset();
+		shapeIds.resize(vertices.size());
+		texMesh->geometry()->shapeIds().reset();
+		// load texture...
+		dyno::CArray2D<dyno::Vec4f> texture(1, 1);
+		texture[0, 0] = dyno::Vec4f(1);
 
-        dyno::CArray2D<dyno::Vec4f> texture(1, 1);
-        texture(0, 0) = dyno::Vec4f(1);
+		std::vector<std::shared_ptr<Material>> tMats;
+		tMats.resize(materials.size());
 
-        std::vector<std::shared_ptr<Material>> tMats;
-        tMats.resize(materials.size());
+		uint mId = 0;
+		for (const auto& mtl : materials) {
 
-        uint mId = 0;
-        for (const auto& mtl : materials) {
 
-            auto findMat = MaterialManager::getMaterialPtr(mtl.name);
-            if (findMat)
-            {
-                std::cout << "The material already exists: " << mtl.name << std::endl;
-                tMats[mId] = findMat;
-                mId++;
-                continue;
-            }
+			auto findMat = MaterialManager::getMaterialPtr(mtl.name);
+			if (findMat)
+			{
+				std::cout << "The material already exists: " << mtl.name << std::endl;
+				tMats[mId] = findMat;
 
-            auto newMat = std::make_shared<Material>();
-            tMats[mId] = newMat;
+				continue;
+			}
 
-            MaterialManager::createMaterialLoaderModule(newMat, mtl.name);
+			auto newMat = std::make_shared<Material>();
+			tMats[mId] = newMat;
 
-            tMats[mId]->baseColor = Color(mtl.diffuse[0], mtl.diffuse[1], mtl.diffuse[2]);
-            tMats[mId]->roughness = 1.0f - mtl.shininess;
+			MaterialManager::createMaterialLoaderModule(newMat, mtl.name);
 
-            std::shared_ptr<ImageLoader> loader = std::make_shared<ImageLoader>();
+			tMats[mId]->baseColor = Color(mtl.diffuse[0], mtl.diffuse[1], mtl.diffuse[2]);
+			tMats[mId]->roughness = 1.0f - mtl.shininess;
 
-            if (!mtl.diffuse_texname.empty())
-            {
-                auto tex_path = (root / mtl.diffuse_texname).string();
+			std::shared_ptr<ImageLoader> loader = std::make_shared<ImageLoader>();
 
-                if (loader->loadImage(tex_path.c_str(), texture))
-                {
-                    tMats[mId]->texColor.assign(texture);
-                }
-            }
-            if (!mtl.bump_texname.empty())
-            {
-                auto tex_path = (root / mtl.bump_texname).string();
+			if (!mtl.diffuse_texname.empty())
+			{
+				auto tex_path = (root / mtl.diffuse_texname).string();
 
-                if (loader->loadImage(tex_path.c_str(), texture))
-                {
-                    tMats[mId]->texBump.assign(texture);
-                    auto texOpt = mtl.bump_texopt;
-                    tMats[mId]->bumpScale = texOpt.bump_multiplier;
-                }
-            }
-            mId++;
-        }
+				if (loader->loadImage(tex_path.c_str(), texture))
+				{
+					tMats[mId]->texColor.assign(texture);
+				}
+			}
+			if (!mtl.bump_texname.empty())
+			{
+				auto tex_path = (root / mtl.bump_texname).string();
 
-        Vec3f globalCenter(0.0f);
-        if (useToCenter && !vertices.empty())
-        {
-            Vec3f globalLo = Vec3f(REAL_MAX);
-            Vec3f globalHi = Vec3f(-REAL_MAX);
-            for (const auto& v : vertices) {
-                globalLo = globalLo.minimum(v);
-                globalHi = globalHi.maximum(v);
-            }
-            globalCenter = (globalLo + globalHi) / 2.0f;
+				if (loader->loadImage(tex_path.c_str(), texture))
+				{
+					tMats[mId]->texBump.assign(texture);
+					auto texOpt = mtl.bump_texopt;
+					tMats[mId]->bumpScale = texOpt.bump_multiplier;
+				}
+			}
 
-            for (auto& v : vertices) {
-                v -= globalCenter;
-            }
-        }
+			mId++;
+		}
 
-        auto& tShapes = texMesh->shapes();
-        tShapes.resize(shapes.size());
 
-        uint sId = 0;
+		auto& tShapes = texMesh->shapes();
+		tShapes.resize(shapes.size());
 
-        for (const tinyobj::shape_t& shape : shapes) {
-            // only load triangle mesh...
-            const auto& mesh = shape.mesh;
-            tShapes[sId] = std::make_shared<Shape>();
-            std::vector<Topology::Triangle> vertexIndex;
-            std::vector<Topology::Triangle> normalIndex;
-            std::vector<Topology::Triangle> texCoordIndex;
+		uint sId = 0;
 
-            if (mesh.material_ids.size() > 0 && mesh.material_ids[0] >= 0)
-            {
-                tShapes[sId]->material = tMats[mesh.material_ids[0]];
-            }
+		for (const tinyobj::shape_t& shape : shapes) {
+			// only load triangle mesh...
+			const auto& mesh = shape.mesh;
+			tShapes[sId] = std::make_shared<Shape>();
+			std::vector<Topology::Triangle> vertexIndex;
+			std::vector<Topology::Triangle> normalIndex;
+			std::vector<Topology::Triangle> texCoordIndex;
 
-            Vec3f lo = Vec3f(REAL_MAX);
-            Vec3f hi = Vec3f(-REAL_MAX);
-            for (int i = 0; i < mesh.indices.size(); i += 3) {
-                auto idx0 = mesh.indices[i];
-                auto idx1 = mesh.indices[i + 1];
-                auto idx2 = mesh.indices[i + 2];
+			if (mesh.material_ids.size() > 0 && mesh.material_ids[0] >= 0)
+			{
+				tShapes[sId]->material = tMats[mesh.material_ids[0]];
+			}
 
-                vertexIndex.push_back({ idx0.vertex_index, idx1.vertex_index, idx2.vertex_index });
-                normalIndex.push_back({ idx0.normal_index, idx1.normal_index, idx2.normal_index });
-                texCoordIndex.push_back({ idx0.texcoord_index, idx1.texcoord_index, idx2.texcoord_index });
+			Vec3f lo = Vec3f(REAL_MAX);
+			Vec3f hi = Vec3f(-REAL_MAX);
+			for (int i = 0; i < mesh.indices.size(); i += 3) {
+				auto idx0 = mesh.indices[i];
+				auto idx1 = mesh.indices[i + 1];
+				auto idx2 = mesh.indices[i + 2];
 
-                // 计算当前 Shape 的包围盒（此时顶点如果是居中模式，已经被平移过了）
-                lo = lo.minimum(vertices[idx0.vertex_index]);
-                lo = lo.minimum(vertices[idx1.vertex_index]);
-                lo = lo.minimum(vertices[idx2.vertex_index]);
+				vertexIndex.push_back({ idx0.vertex_index, idx1.vertex_index, idx2.vertex_index });
+				normalIndex.push_back({ idx0.normal_index, idx1.normal_index, idx2.normal_index });
+				texCoordIndex.push_back({ idx0.texcoord_index, idx1.texcoord_index, idx2.texcoord_index });
 
-                hi = hi.maximum(vertices[idx0.vertex_index]);
-                hi = hi.maximum(vertices[idx1.vertex_index]);
-                hi = hi.maximum(vertices[idx2.vertex_index]);
+				lo = lo.minimum(vertices[idx0.vertex_index]);
+				lo = lo.minimum(vertices[idx1.vertex_index]);
+				lo = lo.minimum(vertices[idx2.vertex_index]);
 
-                if (idx0.vertex_index < shapeIds.size()) shapeIds[idx0.vertex_index] = sId;
-                if (idx1.vertex_index < shapeIds.size()) shapeIds[idx1.vertex_index] = sId;
-                if (idx2.vertex_index < shapeIds.size()) shapeIds[idx2.vertex_index] = sId;
-            }
-            tShapes[sId]->vertexIndex.assign(vertexIndex);
-            tShapes[sId]->normalIndex.assign(normalIndex);
-            tShapes[sId]->texCoordIndex.assign(texCoordIndex);
+				hi = hi.maximum(vertices[idx0.vertex_index]);
+				hi = hi.maximum(vertices[idx1.vertex_index]);
+				hi = hi.maximum(vertices[idx2.vertex_index]);
 
-            tShapes[sId]->boundingBox = TAlignedBox3D<Real>(lo, hi);
-            tShapes[sId]->boundingTransform = Transform3f(globalCenter, Quat1f().toMatrix3x3(), Vec3f(1.0f));
+				shapeIds[idx0.vertex_index] = sId;
+				shapeIds[idx1.vertex_index] = sId;
+				shapeIds[idx2.vertex_index] = sId;
 
-            sId++;
-        }
+			}
+			tShapes[sId]->vertexIndex.assign(vertexIndex);
+			tShapes[sId]->normalIndex.assign(normalIndex);
+			tShapes[sId]->texCoordIndex.assign(texCoordIndex);
 
-        texMesh->geometry()->vertices().assign(vertices);
-        texMesh->geometry()->normals().assign(normals);
-        texMesh->geometry()->texCoords().assign(texCoords);
-        texMesh->geometry()->shapeIds().assign(shapeIds);
+			auto shapeCenter = (lo + hi) / 2;
+			tShapes[sId]->boundingBox = TAlignedBox3D<Real>(lo, hi);
+			tShapes[sId]->boundingTransform = Transform3f(shapeCenter, Quat1f().toMatrix3x3());
 
-        //A hack: for an obj file with one shape
-        if (shapes.size() == 1)
-        {
-            texMesh->geometry()->shapeIds().resize(vertices.size());
-            texMesh->geometry()->shapeIds().reset();
-        }
 
-        vertices.clear();
-        normals.clear();
-        texCoords.clear();
+			//Move to center
+			if (useToCenter)
+			{
+				std::vector<int> indicator(vertices.size(), 0);
+				for (int i = 0; i < mesh.indices.size(); i += 3)
+				{
+					auto idx0 = mesh.indices[i];
+					auto idx1 = mesh.indices[i + 1];
+					auto idx2 = mesh.indices[i + 2];
 
-        return true;
-    }
+					if (indicator[idx0.vertex_index] == 0)
+					{
+						vertices[idx0.vertex_index] -= shapeCenter;
+						indicator[idx0.vertex_index] = 1;
+					}
+					if (indicator[idx1.vertex_index] == 0)
+					{
+						vertices[idx1.vertex_index] -= shapeCenter;
+						indicator[idx1.vertex_index] = 1;
+					}
+					if (indicator[idx2.vertex_index] == 0)
+					{
+						vertices[idx2.vertex_index] -= shapeCenter;
+						indicator[idx2.vertex_index] = 1;
+					}
+				}
+			}
 
+
+			vertexIndex.clear();
+			normalIndex.clear();
+			texCoordIndex.clear();
+
+			sId++;
+		}
+
+		texMesh->geometry()->vertices().assign(vertices);
+		texMesh->geometry()->normals().assign(normals);
+		texMesh->geometry()->texCoords().assign(texCoords);
+		texMesh->geometry()->shapeIds().assign(shapeIds);
+
+		//A hack: for an obj file with one shape
+		if (shapes.size() == 1)
+		{
+			texMesh->geometry()->shapeIds().resize(vertices.size());
+			texMesh->geometry()->shapeIds().reset();
+		}
+
+		vertices.clear();
+		normals.clear();
+		texCoords.clear();
+
+		return true;
+	}
     bool loadObj(std::vector<Vec3f>& points, std::vector<Topology::Triangle>& triangles, std::string filename, bool append)
     {
         if (!append)

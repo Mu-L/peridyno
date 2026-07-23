@@ -483,6 +483,7 @@ namespace dyno
 		sRender->varAlpha()->setValue(0.15);
 		mapper->outTriangleSet()->connect(sRender->inTriangleSet());
 		this->graphicsPipeline()->pushModule(sRender);
+		this->varVehiclesTransform()->pushBack(Transform3f());
 	}
 
 	template<typename TDataType>
