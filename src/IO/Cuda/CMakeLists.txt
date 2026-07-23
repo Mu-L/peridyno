@@ -50,8 +50,11 @@ endif()
 
 #To resolve the error: Target "..." INTERFACE_INCLUDE_DIRECTORIES property contains path: "..." which is prefixed in the build directory.
 #    target_include_directories(${LIB_NAME} PUBLIC ${PERIDYNO_INCLUDE_PATH}) # for generated files
-target_include_directories(${LIB_NAME} PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}>
+target_include_directories(${LIB_NAME} PUBLIC
+    # Not wrapped in BUILD_INTERFACE: CUDA 13.0+ adds /cccl to this list,
+    # and the resulting semicolons would break the $<BUILD_INTERFACE:...> genex.
+    # These paths are outside the source tree, so export validation is unaffected.
+    ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
     $<BUILD_INTERFACE:${PERIDYNO_ROOT}/src/IO/Cuda>
     $<INSTALL_INTERFACE:${PERIDYNO_INC_INSTALL_DIR}>
     $<INSTALL_INTERFACE:${PERIDYNO_INC_INSTALL_DIR}/${LIB_NAME}>)
