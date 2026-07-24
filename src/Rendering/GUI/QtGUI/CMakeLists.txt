@@ -85,6 +85,7 @@ endforeach()
 
 if(WIN32)
     target_compile_options(${LIB_NAME} PRIVATE -Xcompiler "/wd 4819")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus /permissive-")
 endif()
 file(RELATIVE_PATH PROJECT_PATH_REL "${PROJECT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 set_target_properties(${LIB_NAME} PROPERTIES FOLDER "Rendering/GUI")

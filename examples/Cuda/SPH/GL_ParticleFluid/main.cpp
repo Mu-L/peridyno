@@ -111,7 +111,7 @@ std::shared_ptr<SceneGraph> createScene()
 
 int main()
 {
-	UbiApp app(GUIType::GUI_GLFW);
+	UbiApp app(GUIType::GUI_QT);
 
 	app.setSceneGraph(createScene());
 	// window.createWindow(2048, 1152);
