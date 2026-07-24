@@ -389,8 +389,9 @@ namespace dyno
 			// Check each child node for overlap.
 			int idxL = mAllNodes[idx].left;
 			int idxR = mAllNodes[idx].right;
-			bool overlapL = queryAABB.checkOverlap(getAABB(idxL));
-			bool overlapR = queryAABB.checkOverlap(getAABB(idxR));
+
+			bool overlapL = idxL == EMPTY ? false : queryAABB.checkOverlap(getAABB(idxL));
+			bool overlapR = idxR == EMPTY ? false : queryAABB.checkOverlap(getAABB(idxR));
 
 			// Query overlaps a leaf node => report collision.
 			if (overlapL && mAllNodes[idxL].isLeaf()) {
@@ -442,8 +443,9 @@ namespace dyno
 			// Check each child node for overlap.
 			int idxL = mAllNodes[idx].left;
 			int idxR = mAllNodes[idx].right;
-			bool overlapL = queryAABB.checkOverlap(getAABB(idxL));
-			bool overlapR = queryAABB.checkOverlap(getAABB(idxR));
+
+			bool overlapL = idxL == EMPTY ? false : queryAABB.checkOverlap(getAABB(idxL));
+			bool overlapR = idxR == EMPTY ? false : queryAABB.checkOverlap(getAABB(idxR));
 
 			// Query overlaps a leaf node => report collision.
 			if (overlapL && mAllNodes[idxL].isLeaf()) {

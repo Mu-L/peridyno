@@ -14,7 +14,7 @@
 #include "Matrix.h"
 #include "Quat.h"
 
-// Temporary code, to be removed in the  
+ // Temporary code, to be removed in the  
 namespace px
 {
 	struct Plane3D
@@ -103,6 +103,8 @@ namespace dyno
 	template <typename Real> class TCylinder3D;
 	template <typename Real> class TCone3D;
 	template <typename Real> class TGrid3D;
+	template <typename Real> class TMedialCone3D;
+	template <typename Real> class TMedialSlab3D;
 
 	template<typename Real>
 	class TPoint3D
@@ -313,7 +315,7 @@ namespace dyno
 
 		/**
 		 * @brief intersection tests
-		 * 
+		 *
 		 * @return 0 if there is no intersection
 		 */
 		DYN_FUNC int intersect(const TPlane3D<Real>& plane, TPoint3D<Real>& interPt) const;
@@ -434,7 +436,7 @@ namespace dyno
 		DYN_FUNC int intersect(const TSphere3D<Real>& sphere, TSegment3D<Real>& interSeg) const;
 		DYN_FUNC int intersect(const TAlignedBox3D<Real>& abox, TSegment3D<Real>& interSeg) const;
 		DYN_FUNC int intersect(const TOrientedBox3D<Real>& obb, TSegment3D<Real>& interSeg) const;
-		
+
 		DYN_FUNC Real length() const;
 		DYN_FUNC Real lengthSquared() const;
 
@@ -446,7 +448,7 @@ namespace dyno
 		inline DYN_FUNC Coord3D startPoint() const { return v0; }
 		inline DYN_FUNC Coord3D endPoint() const { return v1; }
 
-		inline DYN_FUNC Coord3D direction() const { return v1 - v0;	}
+		inline DYN_FUNC Coord3D direction() const { return v1 - v0; }
 
 		inline DYN_FUNC TSegment3D<Real> operator-(void) const;
 
@@ -607,7 +609,7 @@ namespace dyno
 
 	public:
 		DYN_FUNC TCylinder3D();
-		DYN_FUNC TCylinder3D(const Coord3D& c, const Real& h, const Real &r, const Quat<Real>& rot = Quat<Real>());
+		DYN_FUNC TCylinder3D(const Coord3D& c, const Real& h, const Real& r, const Quat<Real>& rot = Quat<Real>());
 		DYN_FUNC TCylinder3D(const TCylinder3D<Real>& cylinder);
 		DYN_FUNC Real volume() const { return Real(M_PI) * radius * radius * height; }
 
@@ -691,10 +693,23 @@ namespace dyno
 		DYN_FUNC TTet3D(const Coord3D& v0, const Coord3D& v1, const Coord3D& v2, const Coord3D& v3);
 		DYN_FUNC TTet3D(const TTet3D<Real>& tet);
 
-		DYN_FUNC TTriangle3D<Real> face(const int index) const;
-		DYN_FUNC TSegment3D<Real> edge(const int index) const;
+		//Return a triangle with the following vertex ids v0, v1, v2
+		// triangle 0: 0, 1, 2
+		// triangle 1: 1, 0, 3
+		// triangle 2: 2, 3, 0
+		// triangle 3: 3, 2, 1
+		DYN_FUNC TTriangle3D<Real> face(const uint index) const;
 
-		DYN_FUNC Real solidAngle(const int index) const;
+		// Return edges with the following vertex ids
+		// edge 0: 2, 0
+		// edge 1: 0, 1
+		// edge 2: 1, 2
+		// edge 3: 3, 0
+		// edge 4: 3, 1
+		// edge 5: 3, 2
+		DYN_FUNC TSegment3D<Real> edge(const uint index) const;
+
+		DYN_FUNC Real solidAngle(const uint index) const;
 
 		DYN_FUNC Real volume() const;
 
@@ -716,6 +731,49 @@ namespace dyno
 		DYN_FUNC Vector<Real, 4> computeBarycentricCoordinates(const Coord3D& p);
 
 		Coord3D v[4];
+	};
+
+
+	template<typename Real>
+	class TMedialCone3D {
+	public:
+		typedef  Vector<Real, 2> Coord2D;
+		typedef  Vector<Real, 3> Coord3D;
+		typedef  SquareMatrix<Real, 3> Matrix3D;
+
+	public:
+		DYN_FUNC TMedialCone3D();
+		DYN_FUNC TMedialCone3D(const Coord3D& v0, const Coord3D& v1, const Real& r0, const Real& r1);
+		DYN_FUNC TMedialCone3D(const TMedialCone3D<Real>& cone);
+
+		DYN_FUNC Real volume() const;
+		DYN_FUNC bool isValid() const;
+
+		DYN_FUNC TAlignedBox3D<Real> aabb() const;
+
+		Coord3D v[2];
+		Real radius[2];
+	};
+
+	template<typename Real>
+	class TMedialSlab3D {
+	public:
+		typedef  Vector<Real, 2> Coord2D;
+		typedef  Vector<Real, 3> Coord3D;
+		typedef  SquareMatrix<Real, 3> Matrix3D;
+
+	public:
+		DYN_FUNC TMedialSlab3D();
+		DYN_FUNC TMedialSlab3D(const Coord3D& v0, const Coord3D& v1, const Coord3D& v2, const Real& r0, const Real& r1, const Real& r2);
+		DYN_FUNC TMedialSlab3D(const TMedialSlab3D<Real>& slab);
+
+		DYN_FUNC Real volume() const;
+		DYN_FUNC bool isValid() const;
+
+		DYN_FUNC TAlignedBox3D<Real> aabb() const;
+
+		Coord3D v[3];
+		Real radius[3];
 	};
 
 	template<typename Real>
@@ -831,6 +889,8 @@ namespace dyno
 	template class TOrientedBox3D<float>;
 	template class TCylinder3D<float>;
 	template class TCone3D<float>;
+	template class TMedialCone3D<float>;
+	template class TMedialSlab3D<float>;
 
 	template class TPoint3D<double>;
 	template class TLine3D<double>;
@@ -865,6 +925,8 @@ namespace dyno
 	typedef TOrientedBox3D<float> OrientedBox3D;
 	typedef TCylinder3D<float> Cylinder3D;
 	typedef TCone3D<float> Cone3D;
+	typedef TMedialCone3D<float> MedialCone3D;
+	typedef TMedialSlab3D<float> MedialSlab3D;
 #else
 	//convenient typedefs 
 	typedef TPoint3D<double> Point3D;

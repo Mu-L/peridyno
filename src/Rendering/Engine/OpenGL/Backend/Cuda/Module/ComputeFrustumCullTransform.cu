@@ -195,19 +195,7 @@ namespace dyno
 		auto outPtr = this->outVisibleTransform()->constDataPtr();
 		uint outElementCount = (uint)outPtr->elementSize();
 		printf("[FrustumCull] Out / In: %u / %u\n", outElementCount,this->inTransform()->constDataPtr()->elementSize());
-		/*CArray<uint> h_vc;
-		h_vc.assign(visibleCount);
-		CArrayList<Transform3f> cL;
-		cL.assign(this->outVisibleTransform()->getData());
-		for (uint i = 0; i < listCount; ++i)
-		{
-			uint outCnt = cL.lists()[i].size();
-			printf("[FrustumCull] List[%u] 输出大小=%u (预期=%u) %s\n",
-				i, outCnt, h_vc[i],
-				outCnt == h_vc[i] ? "OK" : "MISMATCH!");
-		}
-		h_vc.clear();
-		printf("[FrustumCull] ============================================================\n");*/
+
 #endif
 
 

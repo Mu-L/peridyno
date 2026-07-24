@@ -103,6 +103,9 @@ namespace dyno
 		this->graphicsPipeline()->pushModule(triElement);
 		this->graphicsPipeline()->pushModule(surfaceRender);
 
+		auto assetCallback = std::make_shared<FCallBackFunc>(std::bind(&ConfigurableBody<TDataType>::onTexMeshLoad, this));
+		this->varConfiguration()->getValue().varAssetConfigs()->attach(assetCallback);
+
 	}
 
 	template<typename TDataType>
@@ -148,6 +151,8 @@ namespace dyno
 			return ;
 		}
 
+		this->varConfiguration()->setValue(MultiBodyTuple());
+
 		SceneLoaderXML saveHelper;
 
 		std::map<std::string, FBase*> fieldMap;
@@ -173,24 +178,29 @@ namespace dyno
 			saveHelper.deserializeField(configXmls, fieldMap);
 
 
+		this->fileChanged();
+		this->updateConfig();
 	}
 
 	ElementType ToElementType(RigidShapeType configShape)
 	{
 		switch (configShape)
 		{
-		case SHAPE_BOX:       return ET_BOX;
-		case SHAPE_TET:       return ET_TET;
-		case SHAPE_CAPSULE:   return ET_CAPSULE;
-		case SHAPE_SPHERE:    return ET_SPHERE;
-		case SHAPE_TRI:       return ET_TRI;
-		case SHAPE_COMPOUND:  return ET_COMPOUND;
-		case SHAPE_Other:     return ET_Other;
-		default:              return ET_Other; 
+		case SHAPE_BOX:			     return ET_BOX;
+		case SHAPE_TET:				 return ET_TET;
+		case SHAPE_CAPSULE:			 return ET_CAPSULE;
+		case SHAPE_SPHERE:			 return ET_SPHERE;
+		case SHAPE_TRI:				 return ET_TRI;
+		case SHAPE_COMPOUND:		 return ET_COMPOUND;
+		case SHAPE_MEDIALCONE:		 return ET_MEDIALCONE;
+		case SHAPE_MEDIALSLAB:		 return ET_MEDIALSLAB;
+		case SHAPE_Other:			 return ET_Other;
+
+		default:					 return ET_Other; 
 		}
 	}
 
-	CollisionMask ToCollisionMask(int configMask)
+	CollisionMask ToCollisionMask(unsigned int configMask)
 	{
 		switch (configMask)
 		{
@@ -221,6 +231,9 @@ namespace dyno
 		}
 	}
 
+
+
+
 	template<typename TDataType>
 	void ConfigurableBody<TDataType>::updateConfig()
 	{
@@ -231,24 +244,24 @@ namespace dyno
 		{
 			this->stateTextureMesh()->setDataPtr(this->inTextureMesh()->constDataPtr());
 		}
-		else if (this->stateTextureMesh()->isEmpty()) 
+		else if (this->stateTextureMesh()->isEmpty() && (!this->varFilePath()->getValue().string().empty() || this->varConfiguration()->getValue().varAssetConfigs()->size()))
 		{
-			ArticulatedBody<TDataType>::varChanged();
+			ArticulatedBody<TDataType>::fileChanged();
 		}
-		std::cout << this->varConfiguration()->getValue().varRigidBodyConfigs()->size()<<"\n";
+		std::cout << this->varConfiguration()->getValue().varRigidBodyConfigs()->size() << "\n";
 		if (!this->varConfiguration()->getValue().isValid() || !bool(this->varVehiclesTransform()->size()) || this->stateTextureMesh()->isEmpty())
 			return;
 
 		auto texMesh = this->stateTextureMesh()->constDataPtr();
-		auto& config = this->varConfiguration()->getValue();
+		auto&& config = this->varConfiguration()->getValue();
 
 		auto rigidInfo = config.varRigidBodyConfigs();
 		std::cout << rigidInfo;
 
-		for (auto it = rigidInfo->begin(); it != rigidInfo->end(); it++)
-		{
-			auto rigid = rigidInfo->getElement(it);
-			auto shapeName = rigid.varShapeName()->getValue();
+		//for (auto it = rigidInfo->begin(); it != rigidInfo->end(); it++)
+		//{
+		//	auto rigid = rigidInfo->getElement(it);
+			/*auto shapeName = rigid.varShapeName()->getValue();
 			std::cout << "ShapeName: " << shapeName <<"\n";
 			auto rigidBodyID = rigid.varRigidBodyId()->getValue();
 			std::cout << "RigidBodyID: " << rigidBodyID <<"\n";
@@ -286,7 +299,7 @@ namespace dyno
 			}
 
 			auto shapeConfigs = rigid.varShapeConfigs();
-			for (auto shapeIterator = shapeConfigs->begin(); shapeIterator != shapeConfigs->end(); shapeIterator++) 
+			for (auto shapeIterator = shapeConfigs->begin(); shapeIterator != shapeConfigs->end(); shapeIterator++)
 			{
 				auto shape = shapeConfigs->getElement(shapeIterator);
 
@@ -332,7 +345,7 @@ namespace dyno
 			std::cout << "r2: " << r2.x << "," << r2.y << "," << r2.z << "\n";
 			auto distance = joint.varDistance()->getValue();
 			std::cout << "distance: " << distance << "\n";
-		}
+		}*/
 
 		// **************************** Create RigidBody  **************************** //
 		auto instances = this->varVehiclesTransform();
@@ -363,8 +376,8 @@ namespace dyno
 				if (rigid.varVisualShapeIds()->size())
 				{
 					int validIndex = int(texMesh->shapes().size()) - 1;
-								
-					if(rigid.varVisualShapeIds()->size())
+
+					if (rigid.varVisualShapeIds()->size())
 						visualId = rigid.varVisualShapeIds()->getElement(rigid.varVisualShapeIds()->begin());
 
 					if (visualId <= validIndex && visualId >= 0)
@@ -376,15 +389,15 @@ namespace dyno
 						visualId = texMesh->shapes().size() - 1;
 					}
 				}
-				
+
 				RigidBodyInfo rigidbody;
 
 				rigidbody.bodyId = j * maxGroup + rigid.varConfigGroup()->getValue();
 				rigidbody.angle = rigid.varAngel()->getValue() * Quat<Real>(instance.rotation());
 				rigidbody.linearVelocity = rigid.varLinearVelocity()->getValue();
 				rigidbody.angularVelocity = rigid.varAngularVelocity()->getValue();
-				
-				if (!visualShapePtr) 
+
+				if (!visualShapePtr)
 				{
 					if (std::isnan(rigidbody.position.x))
 					{
@@ -393,46 +406,126 @@ namespace dyno
 					else
 						rigidbody.position = rigid.varPosition()->getValue();
 				}
-				else 
+				else
 				{
 					if (std::isnan(rigidbody.position.x))
 					{
 						rigidbody.position = visualShapePtr->boundingTransform.translation();
 					}
-					else 
+					else
 					{
 						rigidbody.position = visualShapePtr->boundingTransform.translation() + rigidbody.position;
 					}
 				}
-				
-				rigidbody.position = Quat<Real>(instance.rotation()).rotate(rigidbody.position) + instance.translation();
 
-				rigidbody.offset = rigid.varOffset()->getValue();
-				rigidbody.inertia = rigid.varInertia()->getValue();
-				rigidbody.friction = rigid.varFriction()->getValue() == -1 ? this->varFrictionCoefficient()->getValue() : rigid.varFriction()->getValue();
-				rigidbody.restitution = rigid.varRestitution()->getValue();
-				rigidbody.motionType = ToBodyType(rigid.varMotionType()->currentKey());
-				rigidbody.shapeType = ElementType::ET_COMPOUND;
-				rigidbody.collisionMask = ToCollisionMask(rigid.varCollisionMask()->currentKey());
-				
-				Actors[i] = this->createRigidBody(rigidbody);
-
-				if (rigid.varShapeConfigs()->size()) 
+				for (auto elementIterator = rigid.varShapeConfigs()->begin(); elementIterator != rigid.varShapeConfigs()->end(); elementIterator++)
 				{
-					for (auto elementIterator = rigid.varShapeConfigs()->begin(); elementIterator != rigid.varShapeConfigs()->end(); elementIterator++)
+					auto element = rigid.varShapeConfigs()->getElement(elementIterator);
+					Vec3f up;
+					Vec3f down;
+					Vec3f T;
+
+					if (visualShapePtr)
 					{
-						auto element = rigid.varShapeConfigs()->getElement(elementIterator);
-						Vec3f up;
-						Vec3f down;
-						Vec3f T;
+						up = visualShapePtr->boundingBox.v1;
+						down = visualShapePtr->boundingBox.v0;
+						T = visualShapePtr->boundingTransform.translation();
+					}
 
-						if (visualShapePtr)
+					//ma
+					bool matReady = false;
+					if (!element.varMaAssetName()->getValue().empty())
+					{
+						auto maName = element.varMaAssetName()->getValue();
+						const float scaleFactor = rigid.varScale()->getValue().x;
+
+						auto vIter = Vertices.find(maName);
+						auto eIter = Edges.find(maName);
+						auto fIter = Faces.find(maName);
+
+						matReady = vIter != Vertices.end() && eIter != Edges.end() && fIter != Faces.end();
+
+						if (matReady)
 						{
-							up = visualShapePtr->boundingBox.v1;
-							down = visualShapePtr->boundingBox.v0;
-							T = visualShapePtr->boundingTransform.translation();
-						}
+							const float scale2 = scaleFactor * scaleFactor;
+							const float scale3 = scale2 * scaleFactor;
+							const float scale5 = scale3 * scale2;
+							MedialConeInfo medalcone;
+							MedialSlabInfo medalslab;
 
+							rigidbody.mass = mVolume[maName] * scale3 * element.varDensity()->getValue();
+							rigidbody.inertia = this->mInertialMatrix[maName] * (scale5 * element.varDensity()->getValue());
+							rigidbody.mass = mVolume[maName] * scale3 * element.varDensity()->getValue();
+							rigidbody.friction = rigid.varFriction()->getValue() == -1 ? this->varFrictionCoefficient()->getValue() : rigid.varFriction()->getValue();
+							rigidbody.position = rigid.varPosition()->getValue();
+							rigidbody.angle = rigid.varAngel()->getValue();
+							rigidbody.linearVelocity = rigid.varLinearVelocity()->getValue();
+							rigidbody.angularVelocity = rigid.varAngularVelocity()->getValue();
+							rigidbody.motionType = ToBodyType(rigid.varMotionType()->currentKey());
+							rigidbody.bodyId = j * maxGroup + rigid.varConfigGroup()->getValue();;
+
+							Actors[i] = this->createRigidBody(rigidbody, false);
+
+							if (Actors[i] != nullptr)
+							{
+								auto& vertices = this->Vertices[maName];
+								auto& edges = this->Edges[maName];
+								auto& faces = this->Faces[maName];
+								for (size_t j = 0; j < edges.size(); j++)
+								{
+									Vec2i edge = edges[j];
+									if (edge[0] >= vertices.size() || edge[1] >= vertices.size())
+									{
+										std::cerr << "ERROR load edge" << std::endl;
+										continue;
+									}
+									medalcone.v[0] = (Vec3f(vertices[edge[0]][0], vertices[edge[0]][1], vertices[edge[0]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalcone.v[1] = (Vec3f(vertices[edge[1]][0], vertices[edge[1]][1], vertices[edge[1]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalcone.radius[0] = vertices[edge[0]][3] * scaleFactor;
+									medalcone.radius[1] = vertices[edge[1]][3] * scaleFactor;
+									this->bindMedialCone(Actors[i], medalcone);
+								}
+
+								for (size_t j = 0; j < faces.size(); j++)
+								{
+									Vec3i face = faces[j];
+									if (face[0] >= vertices.size() || face[1] >= vertices.size() || face[2] >= vertices.size())
+									{
+										std::cerr << "ERROR load face" << std::endl;
+										continue;
+									}
+
+
+									medalslab.v[0] = (Vec3f(vertices[face[0]][0], vertices[face[0]][1], vertices[face[0]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalslab.v[1] = (Vec3f(vertices[face[1]][0], vertices[face[1]][1], vertices[face[1]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalslab.v[2] = (Vec3f(vertices[face[2]][0], vertices[face[2]][1], vertices[face[2]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalslab.radius[0] = vertices[face[0]][3] * scaleFactor;
+									medalslab.radius[1] = vertices[face[1]][3] * scaleFactor;
+									medalslab.radius[2] = vertices[face[2]][3] * scaleFactor;
+									this->bindMedialSlab(Actors[i], medalslab);
+								}
+							}
+
+							visualId = mName2texMeshID[maName][0];
+						}
+						else
+							continue;
+					}
+					else		// BasicShape 
+					{
+						rigidbody.position = Quat<Real>(instance.rotation()).rotate(rigidbody.position) + instance.translation();
+
+						rigidbody.offset = rigid.varOffset()->getValue();
+						rigidbody.inertia = rigid.varInertia()->getValue();
+						rigidbody.friction = rigid.varFriction()->getValue() == -1 ? this->varFrictionCoefficient()->getValue() : rigid.varFriction()->getValue();
+						rigidbody.restitution = rigid.varRestitution()->getValue();
+						rigidbody.motionType = ToBodyType(rigid.varMotionType()->currentKey());
+						rigidbody.shapeType = ElementType::ET_COMPOUND;
+						rigidbody.collisionMask = ToCollisionMask(rigid.varCollisionMask()->currentKey());
+
+						Actors[i] = this->createRigidBody(rigidbody);
+
+						//Basic Shape
 						switch (element.varShapeType()->currentKey())
 						{
 						case SHAPE_BOX:
@@ -529,21 +622,14 @@ namespace dyno
 							break;
 						}
 					}
+
 				}
-				//else 
-				//{
-				//	BoxInfo currentBox;
-				//	currentBox.halfLength = Vec3f(0.1);
-				//	this->bindBox(Actors[i], currentBox, 100);
-				//}
 
-				//
-
-				//if (visualId!= -1 && Actors[i] != NULL)
-				//{
-				//	////bindShapetoActor
-				//	this->bindShape(Actors[i], Pair<uint, uint>(visualId, j));
-				//}
+				if (visualId != -1 && Actors[i] != NULL)
+				{
+					////bindShapetoActor
+					this->bindShape(Actors[i], Pair<uint, uint>(visualId, j), rigid.varScale()->getValue());
+				}
 			}
 
 			auto jointInfo = config.varJointConfigs();
@@ -569,7 +655,7 @@ namespace dyno
 					printf("JointInfo : Error RigidId  [%d], [%d]\n", first, second);
 					continue;
 				}
-				if (Actors[first] == NULL || Actors[second] == NULL) 
+				if (Actors[first] == NULL || Actors[second] == NULL)
 				{
 					printf("JointInfo : Actor is NULL [%d], [%d]\n", first, second);
 					continue;
@@ -579,7 +665,7 @@ namespace dyno
 				if (type == JOINT_Hinge)
 				{
 					auto& hingeJoint = this->createHingeJoint(Actors[first], Actors[second]);
-					hingeJoint.setAnchorPoint(relative ? (Actors[first]->center + anchorOffset) : anchorOffset + instance.translation());
+					hingeJoint.setAnchorPoint(relative ? (Actors[first]->center + anchorOffset) : anchorOffset);
 					hingeJoint.setAxis(axis);
 					if (jointDetail.varUseMoter()->getValue())
 						hingeJoint.setMoter(speed);
@@ -590,7 +676,7 @@ namespace dyno
 				if (type == JOINT_Slider)
 				{
 					auto& sliderJoint = this->createSliderJoint(Actors[first], Actors[second]);
-					sliderJoint.setAnchorPoint(relative ? ((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset) : anchorOffset + instance.translation());
+					sliderJoint.setAnchorPoint((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset);
 					sliderJoint.setAxis(axis);
 					if (jointDetail.varUseMoter()->getValue())
 						sliderJoint.setMoter(speed);
@@ -614,6 +700,52 @@ namespace dyno
 				}
 			}
 		}
+		
+	}
+	template<typename TDataType>
+	void ConfigurableBody<TDataType>::onTexMeshLoad()
+	{
+		auto&& config = this->varConfiguration()->getValue();
+
+		auto rigidInfo = config.varRigidBodyConfigs();
+		auto assetInfo = config.varAssetConfigs();
+		auto jointInfo = config.varJointConfigs();
+
+		std::vector<FilePath> texMeshFiles;
+		std::vector<std::string> assetNames;
+		std::vector<FilePath> maFiles;
+
+		for (auto it = assetInfo->begin(); it != assetInfo->end(); it++)
+		{
+			auto asset = assetInfo->getElement(it);
+			if (asset.isValid()) 
+			{
+				texMeshFiles.push_back(asset.varTexMeshPath()->getValue());
+				maFiles.push_back(asset.varMaPath()->getValue());
+				assetNames.push_back(asset.varAssetName()->getValue());
+			}
+		}
+
+		if (texMeshFiles.size())
+		{
+			loadTextureMeshFromFiles(
+				this->stateTextureMesh()->getDataPtr(),
+				texMeshFiles,
+				assetNames,
+				mBaryCenter,
+				mVolume,
+				mInertialMatrix,
+				mName2texMeshID,
+				true
+			);
+		}
+		if (maFiles.size()) 
+		{
+			for (size_t i = 0; i < maFiles.size(); i++)
+			{
+				loadMa(assetNames[i], maFiles[i].string());
+			}
+		}
 
 	}
 
@@ -629,6 +761,155 @@ namespace dyno
 		RigidBodySystem<TDataType>::postUpdateStates();
 
 		this->updateInstanceTransform();
+	}
+
+
+	template<typename TDataType>
+	bool ConfigurableBody<TDataType>::loadMa(std::string name, std::string file_path)
+	{
+		std::vector<Vec4f> vertices;
+		std::vector<Vec2i> edges;
+		std::vector<Vec3i>	faces;
+		std::string filename = file_path;
+		
+		bool is_absolute = false;
+		if (!file_path.empty())
+		{
+			if (file_path.size() >= 3 && std::isalpha(file_path[0]) && file_path[1] == ':')
+			{
+				char sep = file_path[2];
+				if (sep == '\\' || sep == '/')
+				{
+					is_absolute = true;
+				}
+			}
+			else if (file_path.size() >= 2 && file_path[0] == '\\' && file_path[1] == '\\')
+			{
+				is_absolute = true;
+			}
+		}
+
+		if (is_absolute)
+		{
+			filename = file_path;
+		}
+		else
+		{
+			std::string asset_root = getAssetPath();
+			if (!asset_root.empty())
+			{
+				char last = asset_root.back();
+				if (last != '\\' && last != '/')
+				{
+					asset_root += "\\";
+				}
+			}
+			filename = asset_root + file_path;
+		}
+		
+		std::ifstream inputFile(filename);
+		std::string line;
+		int num_vertices = 0, num_edges = 0, num_faces = 0;
+
+		if (!inputFile.is_open())
+		{
+			std::cerr << "ERROR MA FILE: cannot open " << filename << std::endl;
+			return false;
+		}
+
+		if (std::getline(inputFile, line))
+		{
+			std::istringstream iss(line);
+			if (!(iss >> num_vertices >> num_edges >> num_faces)) {
+				std::cerr << "ERROR MA FILE: invalid header in " << filename << std::endl;
+				inputFile.close();
+				return false;
+			}
+			std::cout << "num Of vertices : " << num_vertices
+				<< ", num Of edges : " << num_edges
+				<< ", num Of faces : " << num_faces << std::endl;
+		}
+		else
+		{
+			std::cerr << "ERROR MA FILE: empty file " << filename << std::endl;
+			inputFile.close();
+			return false;
+		}
+
+		int current_vertex_count = 0;
+		int current_edge_count = 0;
+		int current_face_count = 0;
+
+		while (std::getline(inputFile, line))
+		{
+			if (line.empty() || line[0] == '#')
+			{
+				continue;
+			}
+
+			std::istringstream iss(line);
+			char type;
+			iss >> type;
+
+			if (type == 'v' && current_vertex_count < num_vertices)
+			{
+				Vec4f vertex;
+				if (iss >> vertex[0] >> vertex[1] >> vertex[2] >> vertex[3])
+				{
+					vertex = vertex;
+					vertices.push_back(vertex);
+					current_vertex_count++;
+				}
+				else {
+					std::cerr << "ERROR load vertex" << std::endl;
+				}
+			}
+			else if (type == 'e' && current_edge_count < num_edges)
+			{
+				Vec2i edge;
+				if (iss >> edge[0] >> edge[1])
+				{
+					if (edge[0] >= 0 && edge[0] < num_vertices && edge[1] >= 0 && edge[1] < num_vertices)
+					{
+						edges.push_back(edge);
+						current_edge_count++;
+					}
+					else {
+						std::cerr << "ERROR load edge" << std::endl;
+					}
+				}
+				else {
+					std::cerr << "ERROR load edge" << std::endl;
+				}
+			}
+			else if (type == 'f' && current_face_count < num_faces)
+			{
+				Vec3i face;
+				if (iss >> face[0] >> face[1] >> face[2])
+				{
+					if (face[0] >= 0 && face[0] < num_vertices && face[1] >= 0 && face[1] < num_vertices && face[2] >= 0 && face[2] < num_vertices)
+					{
+						faces.push_back(face);
+						current_face_count++;
+					}
+					else {
+						std::cerr << "ERROR load face" << std::endl;
+					}
+				}
+				else {
+					std::cerr << "ERROR load face" << std::endl;
+				}
+			}
+		}
+		inputFile.close();
+
+		this->Vertices[name] = std::move(vertices);
+		this->Edges[name] = std::move(edges);
+		this->Faces[name] = std::move(faces);
+
+		return num_vertices == current_vertex_count
+			&& num_edges == current_edge_count
+			&& num_faces == current_face_count;
 	}
 
 	DEFINE_CLASS(ConfigurableBody);

@@ -29,32 +29,11 @@
 
 #include "ImGuizmo.h"
 
+#include "ImCameraAgent.h"
+
 #include <Node/ParametricModel.h>
 
 using namespace dyno;
-
-class WidgetQueue : public Action
-{
-
-private:
-	void process(Node* node) override
-	{
-		if (!node->isVisible())
-			return;
-
-		for (auto iter : node->graphicsPipeline()->activeModules())
-		{
-			auto m = dynamic_cast<ImWidget*>(iter.get());
-			if (m && m->isVisible())
-			{
-				//m->update();
-				modules.push_back(m);
-			}
-		}
-	}
-public:
-	std::vector<ImWidget*> modules;
-};
 
 void dyno::ImWindow::initialize(float scale)
 {		
@@ -517,6 +496,29 @@ void ImWindow::draw(RenderWindow* app)
 	
 	// Draw custom widgets
 	// gather visual modules
+	class WidgetQueue : public Action
+	{
+
+	private:
+		void process(Node* node) override
+		{
+			if (!node->isVisible())
+				return;
+
+			for (auto iter : node->graphicsPipeline()->activeModules())
+			{
+				auto m = dynamic_cast<ImWidget*>(iter.get());
+				if (m && m->isVisible())
+				{
+					//m->update();
+					modules.push_back(m);
+				}
+			}
+		}
+	public:
+		std::vector<ImWidget*> modules;
+	};
+
 	WidgetQueue imWidgetQueue;
 	// enqueue render content
 	if (scene && !scene->isEmpty())
@@ -528,6 +530,50 @@ void ImWindow::draw(RenderWindow* app)
 	{
 		widget->update();
 		widget->paint();
+	}
+
+	class CameraAgentQueue : public Action
+	{
+	private:
+		void process(Node* node) override
+		{
+			if (!node->isVisible())
+				return;
+
+			auto m = dynamic_cast<ImCameraAgent*>(node);
+
+			if (m && m->varEnabled()->getValue() == true) agents.push_back(m);
+		}
+	public:
+		std::vector<ImCameraAgent*> agents;
+	};
+
+	CameraAgentQueue agentQueue;
+	if (scene && !scene->isEmpty())
+	{
+		scene->traverseForward(&agentQueue);
+	}
+
+	for (auto agent : agentQueue.agents)
+	{
+		auto cam = agent->camera();
+
+		RenderParams renderParams;
+
+		renderParams.width = cam->viewportWidth();
+		renderParams.height = cam->viewportHeight();
+
+		// check if window is minimized
+		if (renderParams.width == 0 || renderParams.height == 0)
+			continue;
+
+		renderParams.transforms.model = glm::mat4(1);	 // TODO: world transform?
+		renderParams.transforms.view = cam->getViewMat();
+		renderParams.transforms.proj = cam->getProjMat();
+		renderParams.unitScale = cam->unitScale();
+		renderParams.groundPlaneAxis = (int)cam->viewportType();
+
+		engine->draw(scene.get(), renderParams, agent->varViewportLocation()->getValue());
 	}
 }
 

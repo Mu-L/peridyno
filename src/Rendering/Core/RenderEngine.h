@@ -21,6 +21,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+#include "Vector.h"
 #include "RenderParams.h"
 
 namespace dyno
@@ -59,7 +60,14 @@ namespace dyno
 		virtual void initialize() = 0;
 		virtual void terminate() = 0;
 
-		virtual void draw(SceneGraph* scene, const RenderParams& rparams) = 0;
+		/**
+		 * @brief Rendering a scenegraph
+		 * 
+		 * @param scene  Scenegraph used for rendering
+		 * @param rparams Parameters used for rendering
+		 * @param p 2D coordinates for the bottom left corner of the viewport
+		 */
+		virtual void draw(SceneGraph* scene, const RenderParams& rparams, const Vec2i p = Vec2i(0)) = 0;
 
 
 		virtual Selection select(int x, int y, int w, int h) = 0;

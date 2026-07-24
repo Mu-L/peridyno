@@ -25,9 +25,49 @@
 
 #include "GltfLoader.h"
 
+#include <Node/Agent.h>
+
+#include <ImCameraAgent.h>
+
 
 using namespace std;
 using namespace dyno;
+
+class Attachment : public Agent
+{
+public:
+	Attachment() {};
+	~Attachment() {};
+
+	DEF_NODE_PORT(RigidBodySystem<DataType3f>, RigidBodies, "");
+
+protected:
+	void resetStates() override
+	{
+		prepareStates();
+	}
+
+	void updateStates() override
+	{
+		prepareStates();
+	}
+	
+private:
+	void prepareStates()
+	{
+		auto rb = this->importRigidBodies()->getDerivedNode();
+
+		auto centers = rb->stateCenter()->constDataPtr();
+		auto quats = rb->stateQuaternion()->constDataPtr();
+
+		auto c = centers->get(0);
+		auto q = quats->get(0);
+
+		this->stateLocation()->setValue(c);
+		this->stateRotation()->setValue(q);
+	}
+	
+};
 
 std::shared_ptr<SceneGraph> creatCar()
 {
@@ -35,6 +75,13 @@ std::shared_ptr<SceneGraph> creatCar()
 
 	auto jeep = scn->addNode(std::make_shared<ArticulatedBody<DataType3f>>());
 	jeep->varFilePath()->setValue(getAssetPath() + "Jeep/JeepGltf/jeep.gltf");
+
+	auto attachment = scn->addNode(std::make_shared<Attachment>());
+	jeep->connect(attachment->importRigidBodies());
+
+	auto cameraAgent = scn->addNode(std::make_shared<ImCameraAgent>());
+	cameraAgent->varLocalTranslation()->setValue(Vec3f(0, 1.8f, -10.f));
+	attachment->connect(cameraAgent->importParent());
 
 	uint N = 1;
 

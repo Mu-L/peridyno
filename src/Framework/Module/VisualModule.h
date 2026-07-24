@@ -30,6 +30,8 @@ namespace dyno
 
 	private:
 		DEF_VAR(bool, Visible, true, "A toggle to control the viability");
+
+
 	};
 }
 

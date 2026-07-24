@@ -102,7 +102,7 @@ IF(MSVC)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 	# fix the fetal error for cuda 13.2: MSVC/cl.exe with traditional preprocessor is used. This may lead to unexpected compilation errors.
 	add_compile_definitions(CCCL_IGNORE_MSVC_TRADITIONAL_PREPROCESSOR_WARNING)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -utf-8")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -utf-8 /MP")
 ENDIF(MSVC)
 
 # installation destinations
@@ -143,7 +143,6 @@ set(WT_GUI_SUPPORTED "WT_GUI_UNKNOWN")
 
 
 if("${PERIDYNO_GPU_BACKEND}" STREQUAL "CUDA")
-	#option(PERIDYNO_LIBRARY_IO "Enable binding the io library" ON)
 	#option(PERIDYNO_LIBRARY_RENDERING "Enable binding the rendering library" ON)
 	option(PERIDYNO_PLUGIN_ALL "Enable binding the plugin libraries" ON)
 

@@ -50,6 +50,19 @@ namespace dyno
 		void saveToFile() override;
 		void loadFromFile();
 		void updateConfig();
+		void onTexMeshLoad() override;
 
+		bool loadMa(std::string name, std::string file_path);
+
+	public:
+		std::map<std::string,std::vector<Vec4f>> Vertices;
+		std::map<std::string,std::vector<Vec2i>> Edges;
+		std::map<std::string,std::vector<Vec3i>> Faces;
+
+	private:
+		std::map<std::string, std::vector<uint>> mName2texMeshID;
+		std::map<std::string, Vec3f> mBaryCenter;
+		std::map<std::string, Real> mVolume;
+		std::map<std::string, Mat3f> mInertialMatrix;
 	};
 }

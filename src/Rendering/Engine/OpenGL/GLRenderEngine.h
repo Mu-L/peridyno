@@ -47,7 +47,7 @@ namespace dyno
 		virtual void initialize() override;
 		virtual void terminate() override;
 
-		virtual void draw(dyno::SceneGraph* scene, const RenderParams& rparams) override;
+		virtual void draw(dyno::SceneGraph* scene, const RenderParams& rparams, const Vec2i p = Vec2i(0)) override;
 
 		virtual std::string name() const override;
 

@@ -22,6 +22,8 @@
 #include "Tuple.h"
 #include "Field/FList.h"
 #include "Matrix/Matrix3x3.h"
+#include <Field/FilePath.h>
+
 
 namespace dyno
 {
@@ -32,6 +34,8 @@ namespace dyno
 		SHAPE_SPHERE = 8,
 		SHAPE_TRI = 16,
 		SHAPE_COMPOUND = 32,
+		SHAPE_MEDIALCONE = 64,
+		SHAPE_MEDIALSLAB = 128,
 		SHAPE_Other = 0x80000000
 	);
 
@@ -49,6 +53,7 @@ namespace dyno
 			this->varRadius()->setValue(other.varRadius()->getValue());
 			this->varCapsuleLength()->setValue(other.varCapsuleLength()->getValue());
 			this->varTet()->assign(other.varTet());
+			this->varMaAssetName()->setValue(other.varMaAssetName()->getValue());
 		}
 		ShapeTuple& operator=(ShapeTuple& other) {
 			this->varShapeType()->setValue(other.varShapeType()->getValue());
@@ -59,6 +64,8 @@ namespace dyno
 			this->varRadius()->setValue(other.varRadius()->getValue());
 			this->varCapsuleLength()->setValue(other.varCapsuleLength()->getValue());
 			this->varTet()->assign(other.varTet());
+			this->varMaAssetName()->setValue(other.varMaAssetName()->getValue());
+
 			return *this;
 		}
 
@@ -74,6 +81,7 @@ namespace dyno
 			this->varRadius()->setValue(nonConstPtr->varRadius()->getValue());
 			this->varCapsuleLength()->setValue(nonConstPtr->varCapsuleLength()->getValue());
 			this->varTet()->assign(nonConstPtr->varTet());
+			this->varMaAssetName()->setValue(nonConstPtr->varMaAssetName()->getValue());
 		}
 
 		ShapeTuple(
@@ -105,7 +113,8 @@ namespace dyno
 		DEF_VAR(Vec3f, HalfLength, Vec3f(0.0f, 0.0f, 0.0f), "");	// if(type == Box);	
 		DEF_VAR(Real, Radius, 0.0f, "");							//	if(type == Sphere);  if(type == Capsule);
 		DEF_VAR(Real, CapsuleLength, 0.0f, "");						// if(type == Capsule);
-		DEF_LIST(Vec3f, Tet, "");									
+		DEF_LIST(Vec3f, Tet, "");	
+		DEF_VAR(std::string, MaAssetName,"","");
 	};
 
 	DECLARE_ENUM(RigidMotionType,
@@ -127,6 +136,55 @@ namespace dyno
 		RIGID_SphereOnly = 0x00000008,
 		RIGID_Disabled = 0x00000000
 	);
+
+	class AssetTuple : public Tuple
+	{
+	public:
+		AssetTuple() {}
+		~AssetTuple() {}
+
+		AssetTuple(std::string name,std::string ma, std::string texMesh)
+		{
+			this->varAssetName()->setValue(name);
+			this->varMaPath()->setValue(FilePath(ma));
+			this->varTexMeshPath()->setValue(FilePath(texMesh));
+		}
+		AssetTuple(AssetTuple& other)
+		{
+			this->varTexMeshPath()->setValue(other.varTexMeshPath()->getValue());
+			this->varMaPath()->setValue(other.varMaPath()->getValue());
+			this->varAssetName()->setValue(other.varAssetName()->getValue());
+
+		}
+		AssetTuple& operator=(AssetTuple& other) {
+			this->varTexMeshPath()->setValue(other.varTexMeshPath()->getValue());
+			this->varMaPath()->setValue(other.varMaPath()->getValue());
+			this->varAssetName()->setValue(other.varAssetName()->getValue());
+
+			return *this;
+		}
+
+		AssetTuple(const AssetTuple& other) {
+			const AssetTuple* constPtr = &other;
+			AssetTuple* nonConstPtr = const_cast<AssetTuple*>(constPtr);
+
+			this->varTexMeshPath()->setValue(nonConstPtr->varTexMeshPath()->getValue());
+			this->varMaPath()->setValue(nonConstPtr->varMaPath()->getValue());
+			this->varAssetName()->setValue(nonConstPtr->varAssetName()->getValue());
+		}
+
+		bool isValid() 
+		{
+			return !this->varAssetName()->getValue().empty() &&
+				!this->varTexMeshPath()->getValue().string().empty() &&
+				!this->varMaPath()->getValue().string().empty();
+		}
+
+		DEF_VAR(std::string, AssetName, "", "");
+		DEF_VAR(FilePath, TexMeshPath, FilePath(), "");
+		DEF_VAR(FilePath, MaPath, FilePath(), "");
+
+	};
 
 	class RigidBodyTuple : public Tuple
 	{
@@ -170,6 +228,7 @@ namespace dyno
 			this->varConfigGroup()->setValue(nonConstPtr->varConfigGroup()->getValue());
 			this->varVisualShapeIds()->assign(nonConstPtr->varVisualShapeIds());
 			this->varShapeConfigs()->assign(nonConstPtr->varShapeConfigs());
+			this->varScale()->setValue(nonConstPtr->varScale()->getValue());
 
 			return *this;
 		}
@@ -194,6 +253,8 @@ namespace dyno
 			this->varConfigGroup()->setValue(nonConstPtr->varConfigGroup()->getValue());
 			this->varVisualShapeIds()->assign(nonConstPtr->varVisualShapeIds());
 			this->varShapeConfigs()->assign(nonConstPtr->varShapeConfigs());
+			this->varScale()->setValue(nonConstPtr->varScale()->getValue());
+
 		}
 
 		RigidBodyTuple(
@@ -212,7 +273,8 @@ namespace dyno
 			RigidCollisionMask collisionMask,
 			int configGroup = 0,
 			std::list<int> visualShapeIds = std::list<int>(),
-			std::list<ShapeTuple> shapeConfigs = std::list<ShapeTuple>()
+			std::list<ShapeTuple> shapeConfigs = std::list<ShapeTuple>(),
+			Vec3f scale = Vec3f(1.0f)
 		)
 		{
 			this->varShapeName()->setValue(name);
@@ -231,6 +293,7 @@ namespace dyno
 			this->varConfigGroup()->setValue(configGroup);
 			this->varVisualShapeIds()->assign(visualShapeIds);
 			this->varShapeConfigs()->assign(shapeConfigs);
+			this->varScale()->setValue(scale);
 		}
 
 		DEF_VAR(std::string, ShapeName,"", "");
@@ -240,20 +303,22 @@ namespace dyno
 		DEF_VAR(Vec3f, LinearVelocity, Vec3f(0.0f),"");
 		DEF_VAR(Vec3f, AngularVelocity, Vec3f(0.0f),"");
 		DEF_VAR(Vec3f, Position, Vec3f(std::nanf("")),"");
+		DEF_VAR(Vec3f, Scale, Vec3f(1.0f), "");
 		DEF_VAR(Vec3f, Offset, Vec3f(0.0f),"");
-		DEF_VAR(Mat3f, Inertia, Mat3f(0.0f),"");
-		DEF_VAR(Real, Friction, -1.0f,"");
-		DEF_VAR(Real, Restitution, 0.0f,"");
+		DEF_VAR(Mat3f, Inertia, Mat3f(0.0f),"QtStyle(Advance)");
+		DEF_VAR(Real, Friction, -1.0f,"QtStyle(Advance)");
+		DEF_VAR(Real, Restitution, 0.0f,"QtStyle(Advance)");
 		
-		DEF_ENUM(RigidMotionType, MotionType, RigidMotionType::RIGID_Dynamic, "RigidMotionType");
+		DEF_ENUM(RigidMotionType, MotionType, RigidMotionType::RIGID_Dynamic, "RigidMotionType;QtStyle(Advance)");
 
 		DEF_ENUM(RigidShapeType, ShapeType, RigidShapeType::SHAPE_Other, "RigidMotionType");
 		
-		DEF_ENUM(RigidCollisionMask, CollisionMask, RigidCollisionMask::RIGID_AllObjects, "RigidMotionType");
+		DEF_ENUM(RigidCollisionMask, CollisionMask, RigidCollisionMask::RIGID_AllObjects, "RigidMotionType;QtStyle(Advance)");
 
-		DEF_VAR(int, ConfigGroup, 0, "");
+		DEF_VAR(int, ConfigGroup, 0, "QtStyle(Advance)");
 		DEF_LIST(int, VisualShapeIds, "");
 		DEF_LIST(ShapeTuple, ShapeConfigs, "");
+
 
 		bool isValid() { return this->varShapeConfigs()->size() > 0; }
 		bool isValidPosition() { return std::isnan(this->varPosition()->getValue().x * this->varPosition()->getValue().y * this->varPosition()->getValue().z); }
@@ -402,7 +467,7 @@ namespace dyno
 		MultiBodyTuple& operator=(MultiBodyTuple& other) {
 			this->varRigidBodyConfigs()->assign(other.varRigidBodyConfigs());
 			this->varJointConfigs()->assign(other.varJointConfigs());
-
+			this->varAssetConfigs()->assign(other.varAssetConfigs());
 			return *this;
 		}
 
@@ -423,12 +488,14 @@ namespace dyno
 
 			this->varRigidBodyConfigs()->assign(nonConstPtr->varRigidBodyConfigs());
 			this->varJointConfigs()->assign(nonConstPtr->varJointConfigs());
+			this->varAssetConfigs()->assign(nonConstPtr->varAssetConfigs());
 		}
 
 		~MultiBodyTuple() {};
 
 		bool isValid() { return this->varRigidBodyConfigs()->size(); }
 
+		DEF_LIST(AssetTuple, AssetConfigs, "");
 		DEF_LIST(RigidBodyTuple, RigidBodyConfigs, "");
 		DEF_LIST(MultiBodyJointTuple, JointConfigs, "");
 

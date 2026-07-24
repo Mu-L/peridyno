@@ -11,7 +11,6 @@
 #include "ShaderStruct.h"
 
 #define ENABLE_FRUSTUM_CULL true
-#define DISABLE_LOD_FOR_DEBUG false
 
 namespace dyno
 {
@@ -70,19 +69,19 @@ namespace dyno
 	{
 #ifdef CUDA_BACKEND
 
-		if (!this->inTextureMesh()->constDataPtr()->useLod())
-		{
-			auto transPtr = this->inTransform()->constDataPtr();
+		//if (!this->inTextureMesh()->constDataPtr()->useLod())
+		//{
+		//	auto transPtr = this->inTransform()->constDataPtr();
 
-			mXTransformBuffer.load(transPtr->elements());
-			if (this->inTransform()->isModified())
-			{
-				auto texMesh = this->inTextureMesh()->constDataPtr();
-				mOffset.assign(transPtr->index());
-				mLists.assign(transPtr->lists());
-				mNeedUpdateInstanceTransform = true;
-			}
-		}
+		//	mXTransformBuffer.load(transPtr->elements());
+		//	if (this->inTransform()->isModified())
+		//	{
+		//		auto texMesh = this->inTextureMesh()->constDataPtr();
+		//		mOffset.assign(transPtr->index());
+		//		mLists.assign(transPtr->lists());
+		//		mNeedUpdateInstanceTransform = true;
+		//	}
+		//}
 #endif
 
 		GLPhotorealisticRender::updateImpl();
@@ -175,39 +174,6 @@ namespace dyno
 
 		if(this->inTextureMesh()->constDataPtr()->useLod())
 		{
-#if DISABLE_LOD_FOR_DEBUG
-#if ENABLE_FRUSTUM_CULL
-			if (frustumChanged || this->inTransform()->isModified())
-			{
-				DArray<Plane3D> dPlanes;
-				dPlanes.assign(mFrustumPlanes);
-				mComputeFrustumCull->inFrustumPlanes()->assign(dPlanes);
-				mComputeFrustumCull->update();
-				dPlanes.clear();
-			}
-
-			auto cullOutPtr = mComputeFrustumCull->outVisibleTransform()->constDataPtr();
-			if (cullOutPtr && cullOutPtr->elementSize() > 0)
-			{
-				mXTransformBuffer.load(cullOutPtr->elements());
-				mXTransformBuffer.updateGL();
-				mOffset.assign(cullOutPtr->index());
-				mLists.assign(cullOutPtr->lists());
-				mNeedUpdateInstanceTransform = true;
-			}
-#else
-			mXTransformBuffer.load(transPtr->elements());
-			mXTransformBuffer.updateGL();
-			if (this->inTransform()->isModified())
-			{
-				auto texMesh = this->inTextureMesh()->constDataPtr();
-				mOffset.assign(transPtr->index());
-				mLists.assign(transPtr->lists());
-				mNeedUpdateInstanceTransform = true;
-			}
-#endif
-			paintLOD(rparams, 0);
-#else
 			if (camP.norm() >= 0.0001)
 			{
 #if ENABLE_FRUSTUM_CULL
@@ -269,11 +235,11 @@ namespace dyno
 				mNeedUpdateInstanceTransform = true;
 			}
 			paintLOD(rparams, 2);
-#endif
+
 		}
 		else 
 		{
-#if ENABLE_FRUSTUM_CULL
+	#if ENABLE_FRUSTUM_CULL
 			if (frustumChanged || this->inTransform()->isModified())
 			{
 				DArray<Plane3D> dPlanes;
@@ -287,21 +253,13 @@ namespace dyno
 			if (cullOutPtr && cullOutPtr->elementSize() > 0)
 			{
 				mXTransformBuffer.load(cullOutPtr->elements());
+				mXTransformBuffer.updateGL();
 				mOffset.assign(cullOutPtr->index());
 				mLists.assign(cullOutPtr->lists());
 				mNeedUpdateInstanceTransform = true;
 			}
-#else
-			mXTransformBuffer.load(transPtr->elements());
-			mXTransformBuffer.updateGL();
-			if (this->inTransform()->isModified())
-			{
-				auto texMesh = this->inTextureMesh()->constDataPtr();
-				mOffset.assign(transPtr->index());
-				mLists.assign(transPtr->lists());
-				mNeedUpdateInstanceTransform = true;
-			}
-#endif
+
+	#endif
 
 			paintLOD(rparams, 0);
 		}
@@ -316,26 +274,33 @@ namespace dyno
 			return;
 
 		auto& normals = mTextureMesh.normalsLOD(level);
-		if (normals.count() == 0)
-			return;
+		//if (normals.count() == 0)
+		//	return;
 
 		auto& texCoords = mTextureMesh.texCoordsLOD(level);
 
-		XBuffer<Vec3f>& tangent = level == 0 ? mTangent : (level == 1 ? mTangentLOD1 : mTangentLOD2);
-		XBuffer<Vec3f>& bitangent = level == 0 ? mBitangent : (level == 1 ? mBitangentLOD1 : mBitangentLOD2);
+		bool useInputNormal = false;
 
-		if (normals.count() > 0
-			&& tangent.count() > 0
-			&& bitangent.count() > 0
-			&& normals.count() == tangent.count()
-			&& normals.count() == bitangent.count())
+		if (normals.count() > 0) 
 		{
-			mShaderProgram->setInt("uVertexNormal", 1);
-			normals.bindBufferBase(9);
-			tangent.bindBufferBase(12);
-			bitangent.bindBufferBase(13);
+			XBuffer<Vec3f>& tangent = level == 0 ? mTangent : (level == 1 ? mTangentLOD1 : mTangentLOD2);
+			XBuffer<Vec3f>& bitangent = level == 0 ? mBitangent : (level == 1 ? mBitangentLOD1 : mBitangentLOD2);
+
+			if (normals.count() > 0
+				&& tangent.count() > 0
+				&& bitangent.count() > 0
+				&& normals.count() == tangent.count()
+				&& normals.count() == bitangent.count())
+			{
+				mShaderProgram->setInt("uVertexNormal", 1);
+				normals.bindBufferBase(9);
+				tangent.bindBufferBase(12);
+				bitangent.bindBufferBase(13);
+				useInputNormal = true;
+			}
 		}
-		else
+
+		if(!useInputNormal)
 			mShaderProgram->setInt("uVertexNormal", 0);
 
 
@@ -362,7 +327,7 @@ namespace dyno
 				pbr.color = { mtl->baseColor.x, mtl->baseColor.y, mtl->baseColor.z };
 				pbr.metallic = mtl->metallic;
 				pbr.roughness = mtl->roughness;
-				pbr.alpha = mtl->alpha;
+				pbr.alpha = this->varUseGlobalAlpha()->getValue() ? this->varAlpha()->getValue() : mtl->alpha;
 				pbr.EmissiveIntensity = mtl->emissiveIntensity;
 
 				if (mtl->texORM.isValid())
@@ -421,7 +386,7 @@ namespace dyno
 				pbr.color = { color.r, color.g, color.b };
 				pbr.metallic = this->varMetallic()->getValue();
 				pbr.roughness = this->varRoughness()->getValue();
-				pbr.alpha = this->varAlpha()->getValue();
+				pbr.alpha = this->varUseGlobalAlpha()->getValue() ? this->varAlpha()->getValue() : this->varAlpha()->getValue();
 
 				mPBRMaterialUBlock.load((void*)&pbr, sizeof(pbr));
 				mPBRMaterialUBlock.bindBufferBase(1);
