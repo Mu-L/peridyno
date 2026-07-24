@@ -52,7 +52,7 @@ endif()
 
 #To resolve the error: Target "..." INTERFACE_INCLUDE_DIRECTORIES property contains path: "..." which is prefixed in the build directory.
 #    target_include_directories(${LIB_NAME} PUBLIC ${PERIDYNO_INCLUDE_PATH}) # for generated files
-target_include_directories(${LIB_NAME} PUBLIC 
+target_include_directories(${LIB_NAME} PUBLIC
     $<BUILD_INTERFACE:${PERIDYNO_ROOT}/src/Topology/Cuda>
     $<BUILD_INTERFACE:${PERIDYNO_ROOT}/external/filesystem>
     $<INSTALL_INTERFACE:${PERIDYNO_INC_INSTALL_DIR}>
