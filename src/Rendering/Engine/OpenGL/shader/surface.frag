@@ -4,8 +4,8 @@
 
 #include "common.glsl"
 #include "shadow.glsl"
-#include "transparency.glsl"
 #include "pbr.glsl"
+#include "wboit.glsl"
 
 layout(location=0) in VertexData
 {
@@ -20,6 +20,7 @@ layout(location=0) in VertexData
 
 layout(location = 0) out vec4  fragColor;
 layout(location = 1) out ivec4 fragIndices;
+layout(location = 2) out vec4  outReveal;   // WBOIT revealage (only written in transparent pass)
 
 layout(binding = 10) uniform sampler2D uTexColor;
 layout(binding = 11) uniform sampler2D uTexBump;
@@ -269,61 +270,6 @@ vec3 Shade()
 }
 
 
-vec3 ShadeTransparency()
-{
-	vec3 N = GetNormal();
-	vec3 V = GetViewDir();
-
-	float dotNV = dot(N, V);
-	if (dotNV < 0.0)	N = -N;
-	
-	vec3 Lo = vec3(0);	
-	vec3 baseColor = GetColor();
-
-	vec3 ORM = GetORM();
-	vec3 ORMCorrect = GammaCorrectWithGamma(ORM,2.2);
-
-	// for main directional light
-	{
-		vec3 L = normalize(uRenderParams.direction.xyz);
-	
-		// evaluate BRDF
-		vec3 brdf = EvalPBR(baseColor, ORMCorrect.b, ORMCorrect.g, N, V, L);
-
-		// do not consider attenuation
-		vec3 radiance = uRenderParams.intensity.rgb * uRenderParams.intensity.a;
-
-		// shadow
-		vec3 shadowFactor = vec3(1);
-//		if (uLight.direction.w != 0)
-//			shadowFactor = GetShadowFactor(fs_in.position);
-
-		Lo += shadowFactor * radiance * brdf;
-	}
-	
-	// for a simple camera light
-	{
-		// evaluate BRDF
-		vec3 brdf = EvalPBR(baseColor, ORMCorrect.b, ORMCorrect.g, N, V, V);
-
-		// do not consider attenuation
-		vec3 radiance = uRenderParams.camera.rgb * uRenderParams.camera.a;
-
-		// no shadow...
-		Lo += radiance * brdf;
-	}
-
-	// ambient light
-	vec3 ambient = uRenderParams.ambient.rgb * uRenderParams.ambient.a * baseColor;
-
-	// final color
-	vec3 color = ambient + Lo;
-	color = ReinhardTonemap(color);
-	color = GammaCorrect(color);
-
-	return color;
-}
-
 void ColorPass(void)
 {
 	fragColor.rgb = Shade();
@@ -340,27 +286,54 @@ void ShadowPass(void)
 }
 
 
-void TransparencyLinkedList(void)
+vec3 ShadeTransparency()
 {
-	// Get the index of the next free node in the buffer.
-	uint freeNodeIndex = atomicCounterIncrement(u_freeNodeIndex);
+	vec3 N = GetNormal();
+	vec3 V = GetViewDir();
 
-	// Check, if still space in the buffer.
-	if (freeNodeIndex < uMaxNodes)
+	float dotNV = dot(N, V);
+	if (dotNV < 0.0)	N = -N;
+	
+	vec3 Lo = vec3(0);	
+	vec3 baseColor = GetColor();
+
+	vec3 ORM = GetORM();
+	vec3 ORMCorrect = GammaCorrectWithGamma(ORM, 2.2);
+
+	// for main directional light
 	{
-		// Replace new index as the new head and gather the previous head, which will be the next index of this entry.
-		uint nextIndex = imageAtomicExchange(u_headIndex, ivec2(gl_FragCoord.xy), freeNodeIndex);
+		vec3 L = normalize(uRenderParams.direction.xyz);
+		vec3 brdf = EvalPBR(baseColor, ORMCorrect.b, ORMCorrect.g, N, V, L);
+		vec3 radiance = uRenderParams.intensity.rgb * uRenderParams.intensity.a;
+		vec3 shadowFactor = vec3(1);
+		Lo += shadowFactor * radiance * brdf;
 
-		// Store the color, depth and the next index for later resolving.
-		nodes[freeNodeIndex].color = vec4(ShadeTransparency(), uMtl.alpha);
-		nodes[freeNodeIndex].depth = gl_FragCoord.z;
-		nodes[freeNodeIndex].nextIndex = nextIndex;
-		nodes[freeNodeIndex].geometryID = uRenderParams.index;
-		nodes[freeNodeIndex].instanceID = fs_in.instanceID;
+		// Transmission: a semi-transparent surface lets light from BEHIND pass
+		// through (tinted by the material) instead of being fully occluded.
+		// N faces the viewer here, so dot(N, L) < 0 means the light is behind the
+		// surface. Without this, backlit faces only receive ambient and render black.
+		// Metals do not transmit, so we scale by (1 - metallic).
+		float back = max(dot(-N, L), 0.0);
+		float transmit = back * (1.0 - ORMCorrect.b);
+		Lo += radiance * baseColor * transmit;
 	}
-	// No output to the framebuffer.
-}
+	
+	// for a simple camera light
+	{
+		vec3 brdf = EvalPBR(baseColor, ORMCorrect.b, ORMCorrect.g, N, V, V);
+		vec3 radiance = uRenderParams.camera.rgb * uRenderParams.camera.a;
+		Lo += radiance * brdf;
+	}
 
+	// ambient light
+	vec3 ambient = uRenderParams.ambient.rgb * uRenderParams.ambient.a * baseColor;
+
+	vec3 color = ambient + Lo;
+	color = ReinhardTonemap(color);
+	color = GammaCorrect(color);
+
+	return color;
+}
 
 void main(void) { 
 	if(uRenderParams.mode == 0){
@@ -368,6 +341,14 @@ void main(void) {
 	}else if(uRenderParams.mode == 1){
 		ShadowPass();
 	}else if(uRenderParams.mode == 2){
-		TransparencyLinkedList();
+		// Weighted Blended OIT transparent pass
+		vec3 color = ShadeTransparency();
+		float alpha = uMtl.alpha;
+		float weight = wboitWeight(gl_FragCoord.z, alpha);
+		// accum: rgb = premultiplied color*alpha*weight,  a = sum of alpha*weight
+		//   -> composite avgColor = accum.rgb / accum.a = straight color,
+		//      which is then re-premultiplied by coverage alpha in the composite pass.
+		fragColor = vec4(color * alpha, alpha) * weight;
+		outReveal = vec4(0.0, 0.0, 0.0, alpha);            // revealage in .a (blended as (0, 1-srcAlpha))
 	}
 } 

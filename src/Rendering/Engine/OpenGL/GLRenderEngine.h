@@ -111,12 +111,15 @@ namespace dyno
 		Framebuffer				mSelectFramebuffer;
 		Texture2D				mSelectIndexTex;
 
-		// for linked-list OIT
-		const int				MAX_OIT_NODES = 1024 * 1024 * 8;
-		Buffer					mFreeNodeIdx;
-		Buffer					mLinkedListBuffer;
-		Texture2DMultiSample	mHeadIndexTex;
-		Program*				mBlendProgram;
+		// for Weighted Blended OIT (WBOIT)
+		// dual G-buffers, kept multisample to match the opaque MSAA pass
+		Texture2DMultiSample	mAccumTex;			// RGBA16F: premultiplied, weighted color
+		Texture2DMultiSample	mRevealTex;		// RGBA16F: revealage (product of 1 - alpha)
+		Texture2D				mAccumResolveTex;	// single-sample resolve target for composite
+		Texture2D				mRevealResolveTex;	// single-sample resolve target for composite
+		Framebuffer				mWBOITFramebuffer;	// accum(0) + reveal(2) sharing the opaque depth
+		Framebuffer				mWBOITResolveFBO;	// single-sample accum(0) + reveal(2)
+		Program*				mWBOITCompositeProgram;
 
 		GLRenderHelper*			mRenderHelper;
 		ShadowMap*				mShadowMap = NULL;
