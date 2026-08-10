@@ -4,7 +4,6 @@
 #include "Array/Array3D.h"
 #include "Array/ArrayList.h"
 #include "Array/ArrayMap.h"
-#include <thrust/sort.h>
 #include <vector>
 
 using namespace dyno;

@@ -363,7 +363,7 @@ add_subdirectory(src)
 if("${PERIDYNO_GPU_BACKEND}" STREQUAL "CUDA")
 	option(PERIDYNO_EXAMPLE "Enable building examples" ON)
 
-	option(PERIDYNO_TESTS "Enable python binding with pybind11" OFF)
+	option(PERIDYNO_TESTS "Enable binding tests" ON)
 	if(PERIDYNO_TESTS)
 		append_library("gtest")
 	    add_subdirectory(external/gtest)
