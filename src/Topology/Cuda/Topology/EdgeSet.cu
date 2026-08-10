@@ -2,9 +2,6 @@
 #include <vector>
 #include "Array/ArrayList.h"
 
-#include <thrust/sort.h>
-
-
 namespace dyno
 {
 	template<typename TDataType>

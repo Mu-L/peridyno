@@ -15,10 +15,6 @@
 
 #include "Collision/Attribute.h"
 
-#include <thrust/sort.h>
-#include <thrust/execution_policy.h>
-
-
 namespace dyno 
 {
 	void ApplyTransform(

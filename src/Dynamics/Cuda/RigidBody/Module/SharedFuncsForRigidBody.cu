@@ -1,5 +1,9 @@
 #include "SharedFuncsForRigidBody.h"
 
+
+#include <thrust/sort.h>
+#include <thrust/execution_policy.h>
+
 #include <thrust/scan.h>
 #include <thrust/reduce.h>
 

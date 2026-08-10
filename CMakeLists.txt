@@ -35,8 +35,8 @@ if("${PERIDYNO_GPU_BACKEND}" STREQUAL "CUDA")
 
 	# define library version (update: apparently you can also do it in project()!)
 	set(PERIDYNO_LIBRARY_VERSION_MAJOR 1 CACHE STRING "peridyno major version" FORCE)
-	set(PERIDYNO_LIBRARY_VERSION_MINOR 4 CACHE STRING "peridyno minor version" FORCE)
-	set(PERIDYNO_LIBRARY_VERSION_PATCH 1 CACHE STRING "patch version of peridyno" FORCE)
+	set(PERIDYNO_LIBRARY_VERSION_MINOR 5 CACHE STRING "peridyno minor version" FORCE)
+	set(PERIDYNO_LIBRARY_VERSION_PATCH 0 CACHE STRING "patch version of peridyno" FORCE)
 	set(PERIDYNO_LIBRARY_VERSION "${PERIDYNO_LIBRARY_VERSION_MAJOR}.${PERIDYNO_LIBRARY_VERSION_MINOR}.${PERIDYNO_LIBRARY_VERSION_PATCH}" CACHE STRING "Peridyno version" FORCE)
 
 	set_property(GLOBAL PROPERTY PERIDYNO_LIBRARIES "Core;Framework;Topology")
@@ -46,8 +46,13 @@ if("${PERIDYNO_GPU_BACKEND}" STREQUAL "CUDA")
 	#set(CMAKE_C_CREATE_STATIC_LIBRARY "")
 	#set(CMAKE_C_COMPILE_OBJECT  "")
 
-	set(PERIDYNO_CUDA_ARCH "60" CACHE STRING "Comptue Capability")
-	set_property(CACHE PERIDYNO_CUDA_ARCH PROPERTY STRINGS "60;61;62;70;72;75;80;86;87;89;90")
+	# Fix the following error:The error #error: "MSVC/cl.exe with traditional preprocessor is used"
+	#  	which occurs because CUDA 13.x CCCL headers require a standard conforming preprocessor, while older MSVC builds default to the traditional, non-conforming preprocessor. 
+	#	Using the traditional preprocessor can lead to unexpected compilation errors during CUDA builds on Windows 
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=/Zc:preprocessor")
+
+	set(PERIDYNO_CUDA_ARCH "89" CACHE STRING "Comptue Capability")
+	set_property(CACHE PERIDYNO_CUDA_ARCH PROPERTY STRINGS "60;61;62;70;72;75;80;86;87;89;90;100;103;110;120")
 
 	set(CMAKE_POSITION_INDEPENDENT_CODE ON)                                                         #默认为本项目下各编译目标开启fPIC模式，cuda下面会开启rdc模式
 	set(CUDA_ARCH_FLAGS "${PERIDYNO_CUDA_ARCH}" CACHE STRING "cuda architectures" FORCE)
@@ -167,7 +172,7 @@ if("${PERIDYNO_GPU_BACKEND}" STREQUAL "CUDA")
 	# VTK rendering support, off by default
 	option(PERIDYNO_PLUGIN_VTK "Enable VTK plugin for visualization" OFF)
 	# Qt GUI support, off by default
-	option(PERIDYNO_QT_GUI "Enable building Qt{5 or 6}-based applications" ON)
+	option(PERIDYNO_QT_GUI "Enable building Qt{5 or 6}-based applications" OFF)
 
 	# Wt GUI to support web applications, off by default
 	option(PERIDYNO_WT_GUI "Enable building web applications" OFF)

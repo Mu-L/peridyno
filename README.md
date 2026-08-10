@@ -8,7 +8,7 @@
 
 # Overview
 
-PeriDyno is a CUDA-based, highly parallel physics engine targeted at providing real-time simulation of physical environments for intelligent agents. 
+PeriDyno is a CUDA-based (with optional Vulkan support), highly parallel physics engine targeted at providing real-time simulation of physical environments for intelligent agents. 
 
 # Installation
 
@@ -25,9 +25,9 @@ IDE:
 
 - Visual studio 2019+
 
-CUDA:
+CUDA(12.0+):
 
-- Latest tests were done based on CUDA Toolkit 12.2, should be compatible will other old versions.
+- Latest tests have been verified on CUDA Toolkit 13.3, which should be compatible will other old versions.
 
 Graphics:
 
@@ -37,7 +37,7 @@ Graphics:
 
 Optional:
 
-- Qt(5.13+): https://download.qt.io/
+- Qt(5.13+, the latest verified verion is 6.11.1): https://download.qt.io/
 - Wt(4.10.2+): https://www.webtoolkit.eu/wt/
 - VTK: https://github.com/Kitware/VTK
 - Alembic: https://github.com/alembic/alembic
