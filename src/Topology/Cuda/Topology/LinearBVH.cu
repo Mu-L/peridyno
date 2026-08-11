@@ -8,6 +8,8 @@
 
 #include "Timer.h"
 
+#include <vector>
+
 namespace dyno
 {
 	template<typename TDataType>
@@ -247,41 +249,19 @@ namespace dyno
 
 		if (i >= N) return;
 
-		//Output AABBs of leaf nodes
-// 		auto v0 = sortedAABBs[i + N - 1].v0;
-// 		auto v1 = sortedAABBs[i + N - 1].v1;
-// 		printf("%d: idx, %f %f %f; %f %f %f \n", i + N - 1, v0.x, v0.y, v0.z, v1.x, v1.y, v1.z);
-
 		int idx = bvhNodes[i + N - 1].parent;
-		while (idx != EMPTY) // means idx == 0
+		while (idx != EMPTY && atomicCAS(flags.begin() + idx, 0, 1) != 0) // break when visited at the first time
 		{
-			//printf("Left: %u; Right: %u, \n", idx->left->idx, idx->right->idx);
-			const int old = atomicCAS(flags.begin() + idx, 0, 1);
-			if (old == 0)
-			{
-				// this is the first thread entered here.
-				// wait the other thread from the other child node.
-				return;
-			}
-			assert(old == 1);
-			// here, the flag has already been 1. it means that this
-			// thread is the 2nd thread. merge AABB of both childlen.
-
 			const int l_idx = bvhNodes[idx].left;
 			const int r_idx = bvhNodes[idx].right;
 			const AABB l_aabb = sortedAABBs[l_idx];
 			const AABB r_aabb = sortedAABBs[r_idx];
 			sortedAABBs[idx] = l_aabb.merge(r_aabb);
 
-			//Output AABBs of internal nodes
-// 			auto v0 = sortedAABBs[idx].v0;
-// 			auto v1 = sortedAABBs[idx].v1;
-// 			printf("%d: idx, %f %f %f; %f %f %f \n", idx, v0.x, v0.y, v0.z, v1.x, v1.y, v1.z);
+			__threadfence();
 
 			// look the next parent...
 			idx = bvhNodes[idx].parent;
-
-			//printf("BB %d, \n", idx);
 		}
 	}
 
@@ -337,6 +317,7 @@ namespace dyno
 		// 		timer.start();
 
 		thrust::sort_by_key(thrust::device, mMortonCodes.begin(), mMortonCodes.begin() + mMortonCodes.size(), mSortedObjectIds.begin());
+
 		// 		timer.stop();
 		// 		std::cout << "Sort: " << timer.getElapsedTime() << std::endl;
 
@@ -365,6 +346,7 @@ namespace dyno
 			mSortedAABBs,
 			mAllNodes,
 			mFlags);
+
 		// 		timer.stop();
 		// 		std::cout << "BoundingBox: " << timer.getElapsedTime() << std::endl;
 	}
