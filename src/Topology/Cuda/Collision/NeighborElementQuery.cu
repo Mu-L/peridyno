@@ -26,18 +26,13 @@ namespace dyno
 		this->inAttribute()->tagOptional(true);
 
 		mBroadPhaseCD = std::make_shared<CollisionDetectionBroadPhase<TDataType>>();
+		mBroadPhaseCD->varIsUnique()->setValue(true);
+		mBroadPhaseCD->varMode()->setCurrentKey(BroadPhaseMode::Overlap);
 
 		this->varGridSizeLimit()->attach(
 			std::make_shared<FCallBackFunc>(
 				[=]() {
 					mBroadPhaseCD->varGridSizeLimit()->setValue(this->varGridSizeLimit()->getValue());
-				})
-		);
-
-		this->varSelfCollision()->attach(
-			std::make_shared<FCallBackFunc>(
-				[=]() {
-					mBroadPhaseCD->varSelfCollision()->setValue(this->varSelfCollision()->getValue());
 				})
 		);
 
@@ -590,9 +585,9 @@ namespace dyno
 			mQueriedAABB.resize(t_num);
 		}
 
-		if (mQueryAABB.size() != t_num) {
-			mQueryAABB.resize(t_num);
-		}
+// 		if (mQueryAABB.size() != t_num) {
+// 			mQueryAABB.resize(t_num);
+// 		}
 		//printf("=========== ============= INSIDE SELF COLLISION %d\n", t_num);
 		ElementOffset elementOffset = inTopo->calculateElementOffset();
 
@@ -622,10 +617,10 @@ namespace dyno
 			elementOffset,
 			dHat);
 
-		mQueryAABB.assign(mQueriedAABB);
+		//mQueryAABB.assign(mQueriedAABB);
 
-		mBroadPhaseCD->inSource()->assign(mQueryAABB);
-		mBroadPhaseCD->inTarget()->assign(mQueriedAABB);
+		mBroadPhaseCD->inSource()->assign(mQueriedAABB);
+		//mBroadPhaseCD->inTarget()->assign(mQueriedAABB);
 		// 
 		mBroadPhaseCD->update();
 

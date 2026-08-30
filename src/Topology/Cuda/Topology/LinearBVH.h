@@ -62,8 +62,12 @@ namespace dyno
 
 		void construct(const DArray<AABB>& aabb);
 
-		GPU_FUNC uint requestIntersectionNumber(const AABB& queryAABB, const int queryId = EMPTY) const;
-		GPU_FUNC void requestIntersectionIds(List<int>& ids, const AABB& queryAABB, const int queryId = EMPTY) const;
+		GPU_FUNC uint requestIntersectionNumber(const AABB& queryAABB) const;
+		GPU_FUNC void requestIntersectionIds(List<int>& ids, const AABB& queryAABB) const;
+
+
+		GPU_FUNC uint requestIntersectionNumber(const int queryId, const AABB& queryAABB, bool (*compare)(const AABB&, const AABB&), bool (*filter)(const int, const int)) const;
+		GPU_FUNC void requestIntersectionIds(List<int>& ids, const int queryId, const AABB& queryAABB, bool (*compare)(const AABB&, const AABB&), bool (*filter)(const int, const int)) const;
 
 		GPU_FUNC NodePtr getRoot() const { return &mAllNodes[0]; }
 

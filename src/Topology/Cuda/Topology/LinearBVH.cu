@@ -313,19 +313,12 @@ namespace dyno
 			origin,
 			L);
 
-		// 		GTimer timer;
-		// 		timer.start();
-
 		thrust::sort_by_key(thrust::device, mMortonCodes.begin(), mMortonCodes.begin() + mMortonCodes.size(), mSortedObjectIds.begin());
-
-		// 		timer.stop();
-		// 		std::cout << "Sort: " << timer.getElapsedTime() << std::endl;
 
 		cuExecute(mAllNodes.size(),
 			LBVH_InitialAllNodes,
 			mAllNodes);
 
-		//		timer.start();
 		cuExecute(num,
 			LBVH_ConstructBinaryRadixTree,
 			mAllNodes,
@@ -333,26 +326,29 @@ namespace dyno
 			aabb,
 			mMortonCodes,
 			mSortedObjectIds);
-		// 		timer.stop();
-		// 		std::cout << "Construct: " << timer.getElapsedTime() << std::endl;
 
-		// 		CArray<Node> hArray;
-		// 		hArray.assign(mAllNodes);
-
-		//		timer.start();
 		mFlags.reset();
 		cuExecute(num,
 			LBVH_CalculateBoundingBox,
 			mSortedAABBs,
 			mAllNodes,
 			mFlags);
-
-		// 		timer.stop();
-		// 		std::cout << "BoundingBox: " << timer.getElapsedTime() << std::endl;
 	}
 
 	template<typename TDataType>
-	GPU_FUNC uint LinearBVH<TDataType>::requestIntersectionNumber(const AABB& queryAABB, const int queryId) const
+	GPU_FUNC uint LinearBVH<TDataType>::requestIntersectionNumber(const AABB& queryAABB) const
+	{
+		return requestIntersectionNumber(EMPTY, queryAABB, [](const AABB& a, const AABB& b) {return a.checkOverlap(b);}, [](const int a, const int b) {return true;});
+	}
+
+	template<typename TDataType>
+	GPU_FUNC void LinearBVH<TDataType>::requestIntersectionIds(List<int>& ids, const AABB& queryAABB) const
+	{
+		requestIntersectionIds(ids, EMPTY, queryAABB, [](const AABB& a, const AABB& b) {return a.checkOverlap(b);}, [](const int a, const int b) {return true;});
+	}
+
+	template<typename TDataType>
+	GPU_FUNC uint LinearBVH<TDataType>::requestIntersectionNumber(const int queryId, const AABB& queryAABB, bool (*compare)(const AABB&, const AABB&), bool (*filter)(const int, const int)) const
 	{
 		// Allocate traversal stack from thread-local memory,
 		// and push NULL to indicate that there are no postponed nodes.
@@ -372,18 +368,18 @@ namespace dyno
 			int idxL = mAllNodes[idx].left;
 			int idxR = mAllNodes[idx].right;
 
-			bool overlapL = idxL == EMPTY ? false : queryAABB.checkOverlap(getAABB(idxL));
-			bool overlapR = idxR == EMPTY ? false : queryAABB.checkOverlap(getAABB(idxR));
+			bool overlapL = idxL == EMPTY ? false : compare(queryAABB, getAABB(idxL));
+			bool overlapR = idxR == EMPTY ? false : compare(queryAABB, getAABB(idxR));
 
 			// Query overlaps a leaf node => report collision.
 			if (overlapL && mAllNodes[idxL].isLeaf()) {
 				int objId = mSortedObjectIds[idxL - N + 1];
-				if (objId > queryId) ret++;
+				if (filter(objId, queryId)) ret++;
 			}
 
 			if (overlapR && mAllNodes[idxR].isLeaf()) {
 				int objId = mSortedObjectIds[idxR - N + 1];
-				if (objId > queryId) ret++;
+				if (filter(objId, queryId)) ret++;
 			}
 
 			// Query overlaps an internal node => traverse.
@@ -406,7 +402,7 @@ namespace dyno
 	}
 
 	template<typename TDataType>
-	GPU_FUNC void LinearBVH<TDataType>::requestIntersectionIds(List<int>& ids, const AABB& queryAABB, const int queryId) const
+	GPU_FUNC void LinearBVH<TDataType>::requestIntersectionIds(List<int>& ids, const int queryId, const AABB& queryAABB, bool (*compare)(const AABB&, const AABB&), bool (*filter)(const int, const int)) const
 	{
 		// Allocate traversal stack from thread-local memory,
 		// and push NULL to indicate that there are no postponed nodes.
@@ -426,20 +422,18 @@ namespace dyno
 			int idxL = mAllNodes[idx].left;
 			int idxR = mAllNodes[idx].right;
 
-			bool overlapL = idxL == EMPTY ? false : queryAABB.checkOverlap(getAABB(idxL));
-			bool overlapR = idxR == EMPTY ? false : queryAABB.checkOverlap(getAABB(idxR));
+			bool overlapL = idxL == EMPTY ? false : compare(queryAABB, getAABB(idxL));//queryAABB.checkOverlap(getAABB(idxL));
+			bool overlapR = idxR == EMPTY ? false : compare(queryAABB, getAABB(idxR));//queryAABB.checkOverlap(getAABB(idxR));
 
 			// Query overlaps a leaf node => report collision.
 			if (overlapL && mAllNodes[idxL].isLeaf()) {
 				int objId = mSortedObjectIds[idxL - N + 1];
-				if (objId > queryId)
-					ids.insert(objId);
+				if (filter(objId, queryId)) ids.insert(objId);
 			}
 
 			if (overlapR && mAllNodes[idxR].isLeaf()) {
 				int objId = mSortedObjectIds[idxR - N + 1];
-				if (objId > queryId)
-					ids.insert(objId);
+				if (filter(objId, queryId)) ids.insert(objId);
 			}
 
 			// Query overlaps an internal node => traverse.
