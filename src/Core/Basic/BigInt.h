@@ -1655,7 +1655,7 @@ namespace dyno
         DYN_FUNC bool try_add(const uint512_t& b, uint512_t& res) const
         {
             uint64_t r0, r1, r2, r3, r4, r5, r6, r7;
-            uint64_t t, c;
+            uint64_t c;
 
             r0 = lo0 + b.lo0;
             c = (r0 < lo0);
@@ -1682,7 +1682,7 @@ namespace dyno
         DYN_FUNC uint512_t operator+(const uint512_t& b) const
         {
             uint64_t r0, r1, r2, r3, r4, r5, r6, r7;
-            uint64_t t, c;
+            uint64_t c;
 
             r0 = lo0 + b.lo0;
             c = (r0 < lo0);

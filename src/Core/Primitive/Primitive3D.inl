@@ -4179,6 +4179,73 @@ namespace dyno
 		return true;
 	}
 
+	template<typename Real>
+	DYN_FUNC bool TAlignedBox3D<Real>::contain(const TAlignedBox3D<Real>& abox) const
+	{
+		bool ret = true;
+
+		ret &= (v0[0] <= abox.v0[0]);
+		ret &= (v0[1] <= abox.v0[1]);
+		ret &= (v0[2] <= abox.v0[2]);
+
+		ret &= (v1[0] >= abox.v1[0]);
+		ret &= (v1[1] >= abox.v1[1]);
+		ret &= (v1[2] >= abox.v1[2]);
+
+		return ret;
+	}
+
+	template<typename Real>
+	DYN_FUNC bool TAlignedBox3D<Real>::containStrictly(const TAlignedBox3D<Real>& abox) const
+	{
+		bool ret = true;
+
+		ret &= (v0[0] <= abox.v0[0]);
+		ret &= (v0[1] <= abox.v0[1]);
+		ret &= (v0[2] <= abox.v0[2]);
+
+		ret &= (v1[0] >= abox.v1[0]);
+		ret &= (v1[1] >= abox.v1[1]);
+		ret &= (v1[2] >= abox.v1[2]);
+
+		ret &= (v0 != abox.v0 || v1 != abox.v1);
+
+		return ret;
+	}
+
+	template<typename Real>
+	DYN_FUNC bool TAlignedBox3D<Real>::isContainedBy(const TAlignedBox3D<Real>& abox) const
+	{
+		bool ret = true;
+
+		ret &= (v0[0] >= abox.v0[0]);
+		ret &= (v0[1] >= abox.v0[1]);
+		ret &= (v0[2] >= abox.v0[2]);
+
+		ret &= (v1[0] <= abox.v1[0]);
+		ret &= (v1[1] <= abox.v1[1]);
+		ret &= (v1[2] <= abox.v1[2]);
+
+		return ret;
+	}
+
+	template<typename Real>
+	DYN_FUNC bool TAlignedBox3D<Real>::isContainedStrictlyBy(const TAlignedBox3D<Real>& abox) const
+	{
+		bool ret = true;
+
+		ret &= (v0[0] >= abox.v0[0]);
+		ret &= (v0[1] >= abox.v0[1]);
+		ret &= (v0[2] >= abox.v0[2]);
+
+		ret &= (v1[0] <= abox.v1[0]);
+		ret &= (v1[1] <= abox.v1[1]);
+		ret &= (v1[2] <= abox.v1[2]);
+
+		ret &= (v0 != abox.v0 || v1 != abox.v1);
+
+		return ret;
+	}
 
 	template<typename Real>
 	DYN_FUNC TAlignedBox3D<Real> TAlignedBox3D<Real>::merge(const TAlignedBox3D<Real>& aabb) const
