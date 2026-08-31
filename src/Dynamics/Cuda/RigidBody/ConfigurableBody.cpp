@@ -614,8 +614,8 @@ namespace dyno
 				if (AItor == rigidName2Id.end() || BItor == rigidName2Id.end())
 					continue;
 
-				int first = AItor->second + j * rigidInfo->size();
-				int second = BItor->second + j * rigidInfo->size();
+				int first = AItor->second;
+				int second = BItor->second;
 				Real speed = jointDetail.varMoter()->getValue();
 				auto axis = Quat1f(instance.rotation()).rotate(jointDetail.varAxis()->getValue());
 				auto anchorOffset = jointDetail.varAnchorPoint()->getValue();
