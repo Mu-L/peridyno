@@ -108,30 +108,30 @@ int main()
 
 	Vec3f axis = Vec3f(1,0,0);
 
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Trochanter_R, 1, Hip, 0, JointType::JOINT_Hinge, axis, offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Trochanter_L, 5, Hip, 0, JointType::JOINT_Hinge, axis, offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Shank_R, 3, Thigh_R, 2, JointType::JOINT_Hinge, axis, shankOffset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Shank_L, 7, Thigh_L, 6, JointType::JOINT_Hinge, axis, shankOffset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Foot_R, 4, Shank_R, 3, JointType::JOINT_Hinge, axis, footOffset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Foot_L, 8, Shank_L, 7, JointType::JOINT_Hinge, axis, footOffset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Thigh_R, 2, Trochanter_R, 1, JointType::JOINT_Hinge, axis, thighOffset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Thigh_L, 6, Trochanter_L, 5, JointType::JOINT_Hinge, axis, thighOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Trochanter_R, Hip, JointType::JOINT_Hinge, axis, offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Trochanter_L, Hip, JointType::JOINT_Hinge, axis, offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Shank_R, Thigh_R, JointType::JOINT_Hinge, axis, shankOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Shank_L, Thigh_L, JointType::JOINT_Hinge, axis, shankOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Foot_R, Shank_R, JointType::JOINT_Hinge, axis, footOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Foot_L, Shank_L, JointType::JOINT_Hinge, axis, footOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Thigh_R, Trochanter_R, JointType::JOINT_Hinge, axis, thighOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Thigh_L, Trochanter_L, JointType::JOINT_Hinge, axis, thighOffset, true, 0, true, -90, 90));
 	
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Spine, 9, Hip, 0, JointType::JOINT_Fixed, Vec3f(0, 1, 0), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Body, 10, Spine, 9, JointType::JOINT_Fixed, Vec3f(1, 0, 0), bodyOffset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Neck, 11, Body, 10, JointType::JOINT_Fixed, Vec3f(1, 0, 0), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Head, 12, Neck, 11, JointType::JOINT_Fixed, Vec3f(1, 0, 0), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Shoulder_R, 13, Body, 10, JointType::JOINT_Fixed, Vec3f(1, 0, 0), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Shoulder_L, 18, Body, 10, JointType::JOINT_Fixed, Vec3f(1, 0, 0), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(UpperArm_R, 14, Shoulder_R, 13, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(UpperArm_L, 19, Shoulder_L, 18, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(LowerArm_R, 15, UpperArm_R, 14, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(LowerArm_L, 20, UpperArm_L, 19, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Wrist_R, 16, LowerArm_R, 15, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Spine, Hip, JointType::JOINT_Fixed, Vec3f(0, 1, 0), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Body, Spine, JointType::JOINT_Fixed, Vec3f(1, 0, 0), bodyOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Neck, Body, JointType::JOINT_Fixed, Vec3f(1, 0, 0), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Head, Neck, JointType::JOINT_Fixed, Vec3f(1, 0, 0), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Shoulder_R, Body, JointType::JOINT_Fixed, Vec3f(1, 0, 0), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Shoulder_L, Body, JointType::JOINT_Fixed, Vec3f(1, 0, 0), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(UpperArm_R, Shoulder_R, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(UpperArm_L, Shoulder_L, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(LowerArm_R, UpperArm_R, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(LowerArm_L, UpperArm_L, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Wrist_R, LowerArm_R, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
 	
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Wrist_L, 21, LowerArm_L, 20, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Hand_R, 17, Wrist_R, 16, JointType::JOINT_Fixed, Vec3f(1, 0, 0), handOffset, true, 0, true, -90, 90));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Hand_L, 22, Wrist_L, 21, JointType::JOINT_Fixed, Vec3f(1, 0, 0), -handOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Wrist_L, LowerArm_L, JointType::JOINT_Fixed, Vec3f(0, 0, 1), offset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Hand_R, Wrist_R, JointType::JOINT_Fixed, Vec3f(1, 0, 0), handOffset, true, 0, true, -90, 90));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple(Hand_L, Wrist_L, JointType::JOINT_Fixed, Vec3f(1, 0, 0), -handOffset, true, 0, true, -90, 90));
 
 	
 	robot->varConfiguration()->setValue(configData);

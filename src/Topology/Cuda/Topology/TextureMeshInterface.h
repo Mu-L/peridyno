@@ -1,5 +1,5 @@
 /**
- * Copyright 2017-2021 Xiaowei He
+ * Copyright 2022 Shusen Liu
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,26 +12,32 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Revision history:
+ *
+ * 2024-02-03: replace TriangleSet with PolygonSet as the major state;
  */
+
 #pragma once
-#include "Module.h"
+#include "Node/ParametricModel.h"
+
+#include "Topology/TriangleSet.h"
+#include "Topology/PolygonSet.h"
+#include "Topology/TextureMesh.h"
 
 namespace dyno
 {
-	class VisualModule : public Module
+
+	class TextureMeshInterface
 	{
 	public:
-		VisualModule();
-		virtual ~VisualModule();
 
-		bool isVisible() { return this->varVisible()->getValue(); }
+		TextureMeshInterface() {};
+		~TextureMeshInterface() {};
 
-		std::string getModuleType() override { return "VisualModule"; }
-
-	private:
-		DEF_VAR(bool, Visible, true, "A toggle to control the viability");
-
+		virtual FInstance<TextureMesh>* getTextureMesh() = 0;
 
 	};
-}
 
+	
+}

@@ -1043,8 +1043,8 @@ namespace dyno
 				std::string str = fieldXml->GetText() == nullptr ? "" : fieldXml->GetText();
 				if (fieldMap[fieldName])
 					fieldMap[fieldName]->deserialize(str);
-				else
-					std::cout << "Field == NULL :" << fieldName << "\n";
+				//else
+				//	std::cout << "Field == NULL :" << fieldName << "\n";
 				fieldXml = fieldXml->NextSiblingElement("Field");
 			}
 		}

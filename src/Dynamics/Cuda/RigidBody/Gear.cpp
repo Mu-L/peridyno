@@ -297,6 +297,15 @@ namespace dyno
 	{
 		// Keep collision proxies out of the default render path. Drawing them on
 		// top of the OBJ mesh causes depth fighting and flickering highlights.
+
+
+		auto triElement = std::make_shared<DiscreteElementsToTriangleSet<TDataType>>();
+		this->stateTopology()->connect(triElement->inDiscreteElements());
+		auto surfaceRender = std::make_shared<GLSurfaceVisualModule>();
+		triElement->outTriangleSet()->connect(surfaceRender->inTriangleSet());
+		surfaceRender->varAlpha()->setValue(0.5);
+		this->graphicsPipeline()->pushModule(triElement);
+		this->graphicsPipeline()->pushModule(surfaceRender);
 	}
 
 	template<typename TDataType>

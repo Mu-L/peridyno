@@ -9,6 +9,12 @@ namespace dyno {
 		this->outNormal()->allocate();
 		this->outTangent()->allocate();
 		this->outBitangent()->allocate();
+		this->outNormalLOD1 ()->allocate();
+		this->outTangentLOD1()->allocate();
+		this->outBitangentLOD1()->allocate();
+		this->outNormalLOD2()->allocate();
+		this->outTangentLOD2()->allocate();
+		this->outBitangentLOD2()->allocate();
 	}
 
 	ConstructTangentSpace::~ConstructTangentSpace()
@@ -101,23 +107,57 @@ namespace dyno {
 
 	void ConstructTangentSpace::compute()
 	{
+		computeTangent(0);
+		computeTangent(1);
+		computeTangent(2);
+	}
+
+	void ConstructTangentSpace::computeTangent(int level)
+	{
 		auto mesh = this->inTextureMesh()->constDataPtr();
 
-		auto& inVertex = mesh->geometry()->vertices();
-		auto& inNormal = mesh->geometry()->normals();
-		auto& inTexCoord = mesh->geometry()->texCoords();
-		auto& inShapes =  mesh->shapes();
+		if (mesh->lodGeometry(level)->vertices().isEmpty())
+			return;
 
-		if (this->outNormal()->size() != inNormal.size()) {
-			auto totalNum = inNormal.size();
-			this->outNormal()->resize(totalNum);
-			this->outTangent()->resize(totalNum);
-			this->outBitangent()->resize(totalNum);
+		auto& inVertex = mesh->lodGeometry(level)->vertices();
+		auto& inNormal = mesh->lodGeometry(level)->normals();
+		auto& inTexCoord = mesh->lodGeometry(level)->texCoords();
+		auto& inShapes = mesh->shapes();
+
+		FArray<Vec3f, GPU>* NormalPtr = NULL;
+		FArray<Vec3f, GPU>* TangentPtr = NULL;
+		FArray<Vec3f, GPU>* BitangentPtr = NULL;
+		switch (level)
+		{
+		case 0:
+			NormalPtr = this->outNormal();
+			TangentPtr = this->outTangent();
+			BitangentPtr = this->outBitangent();
+			break;
+		case 1:
+			NormalPtr = this->outNormalLOD1();
+			TangentPtr = this->outTangentLOD1();
+			BitangentPtr = this->outBitangentLOD1();
+			break;
+		case 2:
+			NormalPtr = this->outNormalLOD2();
+			TangentPtr = this->outTangentLOD2();
+			BitangentPtr = this->outBitangentLOD2();
+			break;
+		default:
+			break;
 		}
 
-		auto& outNormal = this->outNormal()->getData();
-		auto& outTangent = this->outTangent()->getData();
-		auto& outBitangent = this->outBitangent()->getData();
+		if (NormalPtr->size() != inNormal.size()) {
+			auto totalNum = inNormal.size();
+			NormalPtr->resize(totalNum);
+			TangentPtr->resize(totalNum);
+			BitangentPtr->resize(totalNum);
+		}
+
+		auto& outNormal = NormalPtr->getData();
+		auto& outTangent = TangentPtr->getData();
+		auto& outBitangent = BitangentPtr->getData();
 
 		outNormal.reset();
 		outTangent.reset();
@@ -151,4 +191,5 @@ namespace dyno {
 
 		outNormal.assign(inNormal);
 	}
+
 }

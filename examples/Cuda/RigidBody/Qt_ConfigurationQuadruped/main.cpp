@@ -14,6 +14,7 @@
 #include "RigidBody/MultibodySystem.h"
 #include <HeightField/SurfaceParticleTracking.h>
 #include <HeightField/RigidSandCoupling.h>
+#include "GLWireframeVisualModule.h"
 
 using namespace std;
 using namespace dyno;
@@ -62,14 +63,14 @@ std::shared_ptr<SceneGraph> creatCar()
 	}
 
 	Vec3f offset = Vec3f(0, 0.17, 0);
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(lf_up, 1, body, 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(lf_down, 2, lf_up, 1, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(lb_up, 3, body, 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(lb_down, 4, lb_up, 3, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(rf_up, 5, body, 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(rf_down, 6, rf_up, 5, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(rb_up, 7, body, 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(rb_down, 8, rb_up, 7, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(lf_up, body, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(lf_down,lf_up, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(lb_up,body,JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(lb_down, lb_up, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(rf_up, body, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(rf_down, rf_up, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(rb_up, body, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(rb_down,rb_up, JointType::JOINT_Hinge, Vec3f(1, 0, 0), offset, true, 0));
 
 	robot->varConfiguration()->setValue(multiBodyConfig);
 
@@ -101,6 +102,7 @@ std::shared_ptr<SceneGraph> creatCar()
 	plane->varSegmentX()->setValue(5);
 	plane->varSegmentZ()->setValue(5);
 	plane->stateTriangleSet()->connect(multibody->inTriangleSet());
+
 
 	//float spacing = 0.1f;
 	//uint res = 256;

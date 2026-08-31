@@ -611,8 +611,542 @@ namespace dyno
 		delete[] content;
 		fclose(fp);
 
+		loadLOD(this->varLOD1()->getValue(),1);
+		loadLOD(this->varLOD2()->getValue(),2);
+
 		return true;
 
+	}
+
+	template<typename TDataType>
+	bool FBXLoader<TDataType>::loadLOD(FilePath filePath, int level)
+	{
+		this->stateTextureMesh()->getDataPtr()->lodShapes(level).clear();
+		this->stateTextureMesh()->getDataPtr()->lodGeometry(level)->vertices().clear();
+		this->stateTextureMesh()->getDataPtr()->lodGeometry(level)->normals().clear();
+		this->stateTextureMesh()->getDataPtr()->lodGeometry(level)->shapeIds().clear();
+		this->stateTextureMesh()->getDataPtr()->lodGeometry(level)->texCoords().clear();
+
+		auto filename = filePath;
+		std::string filepath = filename.string();
+		std::cout <<"LOD: " << filepath << "\n\n";
+
+		FILE* fp = fopen(filepath.c_str(), "rb");
+
+		if (!fp) return false;
+
+		fseek(fp, 0, SEEK_END);
+		long file_size = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		auto* content = new ofbx::u8[file_size];
+		fread(content, 1, file_size, fp);
+
+		auto mFbxScene = ofbx::load((ofbx::u8*)content, file_size, (ofbx::u64)ofbx::LoadFlags::NONE);
+
+		float mFbxScale = mFbxScene->getGlobalSettings()->UnitScaleFactor;
+		int meshCount = mFbxScene->getMeshCount();
+		float tempScale = 0.01;
+
+		//Get Bones
+		auto allObj = mFbxScene->getAllObjects();
+		int objCount = mFbxScene->getAllObjectCount();
+
+		std::map<std::string, std::string> parentTag;
+		std::map<std::string, std::shared_ptr<ModelObject>> nameParentObj;
+		std::map<std::string, std::shared_ptr<Bone>> name2Bone;
+
+		std::vector<std::shared_ptr<Bone>> bonesInfo;
+		for (size_t objId = 0; objId < objCount; objId++)
+		{
+			//Bone
+			if (allObj[objId]->getType() == ofbx::Object::Type::LIMB_NODE)
+			{
+				name2Bone[allObj[objId]->name] = pushBone(allObj[objId], parentTag, nameParentObj, bonesInfo, tempScale);
+			}
+		}
+
+		//setBonesToScene(bonesInfo, targetScene);
+		std::vector<Mat4f> currentPoseInverseMatrix;
+
+		std::vector<std::shared_ptr<MeshInfo>> meshs;
+
+
+		for (int id = 0; id < meshCount; id++)
+		{
+			const ofbx::Mesh* currentMesh = (const ofbx::Mesh*)mFbxScene->getMesh(id);
+
+			std::shared_ptr<MeshInfo> meshInfo = std::make_shared<MeshInfo>();
+
+			auto geoMatrix = currentMesh->getGeometricMatrix();
+			auto gloTf = currentMesh->getGlobalTransform();
+			auto pivot = currentMesh->getRotationPivot();
+			auto locTf = currentMesh->getLocalTransform();
+			auto locR = currentMesh->getLocalRotation();
+			auto locS = currentMesh->getLocalScaling();
+			auto locT = currentMesh->getLocalTranslation();
+			auto preR = currentMesh->getPreRotation();
+
+			meshInfo->localTranslation = Vec3f(locT.x, locT.y, locT.z) * tempScale;
+			meshInfo->localRotation = Vec3f(locR.x, locR.y, locR.z);
+			meshInfo->localScale = Vec3f(locS.x, locS.y, locS.z);
+			meshInfo->preRotation = Vec3f(preR.x, preR.y, preR.z);
+			meshInfo->pivot = Vec3f(pivot.x, pivot.y, pivot.z) * tempScale;
+			meshInfo->name = currentMesh->name;
+
+			if (currentMesh->parent != NULL)
+			{
+				parentTag[std::string(currentMesh->name)] = std::string(currentMesh->parent->name);
+				nameParentObj[std::string(currentMesh->name)] = meshInfo;
+			}
+			else
+			{
+				parentTag[std::string(currentMesh->name)] = std::string("No parent object");
+				nameParentObj[std::string(currentMesh->name)] = nullptr;
+			}
+
+			auto positionCount = currentMesh->getGeometry()->getGeometryData().getPositions().count;
+			auto positionValueCount = currentMesh->getGeometry()->getGeometryData().getPositions().values_count;
+			meshInfo->points.resize(positionValueCount);
+
+			for (size_t i = 0; i < positionCount; i++)
+			{
+				auto pos = currentMesh->getGeometry()->getGeometryData().getPositions().get(i);
+				meshInfo->vertices.push_back(Vec3f(pos.x, pos.y, pos.z) * tempScale);
+				if (pos.x == 5.22856617)
+					printf("x");
+				auto indices = currentMesh->getGeometry()->getGeometryData().getPositions().indices[i];
+				meshInfo->verticeId_pointId.push_back(indices);
+				meshInfo->pointId_verticeId[indices].push_back(i);
+
+				meshInfo->points[indices] = Vec3f(pos.x, pos.y, pos.z) * tempScale;
+			}
+
+
+			auto normalCount = currentMesh->getGeometry()->getGeometryData().getNormals().count;
+			for (size_t i = 0; i < normalCount; i++)
+			{
+				auto n = currentMesh->getGeometry()->getGeometryData().getNormals().get(i);
+				meshInfo->normals.push_back(Vec3f(n.x, n.y, n.z));
+			}
+
+			auto uvCount = currentMesh->getGeometry()->getGeometryData().getUVs().count;
+			for (size_t i = 0; i < uvCount; i++)
+			{
+				auto uv = currentMesh->getGeometry()->getGeometryData().getUVs().get(i);
+				meshInfo->texcoords.push_back(Vec2f(uv.x, uv.y));
+			}
+
+			auto colorCount = currentMesh->getGeometry()->getGeometryData().getColors().count;
+			for (size_t i = 0; i < colorCount; i++)
+			{
+				auto color = currentMesh->getGeometry()->getGeometryData().getColors().get(i);
+				meshInfo->verticesColor.push_back(Vec3f(color.x, color.y, color.z));
+			}
+
+			auto partitionCount = currentMesh->getGeometry()->getGeometryData().getPartitionCount();
+			//auto vertexCount = currentMesh->getGeometry()->getGeometryData().getPartition(0).polygons->vertex_count();
+
+			// Polygons
+			for (size_t i = 0; i < partitionCount; i++)
+			{
+				auto polygonCount = currentMesh->getGeometry()->getGeometryData().getPartition(i).polygon_count;
+
+				CArrayList<uint> polygons;
+				CArray<uint> counter;
+
+				for (size_t j = 0; j < polygonCount; j++)
+				{
+					auto verticesCount = currentMesh->getGeometry()->getGeometryData().getPartition(i).polygons[j].vertex_count;
+					counter.pushBack(verticesCount);
+				}
+				polygons.resize(counter);
+
+				Vec3f boundingMax = Vec3f(-FLT_MAX);
+				Vec3f boundingMin = Vec3f(FLT_MAX);
+
+				for (size_t j = 0; j < polygonCount; j++)
+				{
+					auto& index = polygons[j];
+
+					auto from = currentMesh->getGeometry()->getGeometryData().getPartition(i).polygons[j].from_vertex;
+					auto verticesCount = currentMesh->getGeometry()->getGeometryData().getPartition(i).polygons[j].vertex_count;
+
+					for (size_t k = 0; k < verticesCount; k++)
+					{
+						int polyId = k + from;
+						index.insert(polyId);
+					}
+				}
+				meshInfo->facegroup_polygons.push_back(polygons);
+
+				Topology::Triangle tri;
+				std::vector<Topology::Triangle> triangles;
+				std::vector<Topology::Triangle> triangleNormalIndex;
+				for (size_t j = 0; j < polygonCount; j++)
+				{
+					auto from = currentMesh->getGeometry()->getGeometryData().getPartition(i).polygons[j].from_vertex;
+					auto verticesCount = currentMesh->getGeometry()->getGeometryData().getPartition(i).polygons[j].vertex_count;
+
+					for (size_t k = 0; k < verticesCount - 2; k++)
+					{
+						int polyId = k + from;
+
+						tri[0] = meshInfo->verticeId_pointId[from];
+						tri[1] = meshInfo->verticeId_pointId[k + from + 1];
+						tri[2] = meshInfo->verticeId_pointId[k + from + 2];
+
+						triangles.push_back(tri);
+
+						tri[0] = from;
+						tri[1] = k + from + 1;
+						tri[2] = k + from + 2;
+						triangleNormalIndex.push_back(tri);
+					}
+				}
+
+				meshInfo->facegroup_triangles.push_back(triangles);
+				meshInfo->facegroup_normalIndex.push_back(triangleNormalIndex);
+			}
+
+			//Material
+			auto matCount = currentMesh->getMaterialCount();
+			for (size_t i = 0; i < matCount; i++)
+			{
+				auto mat = currentMesh->getMaterial(i);
+
+				auto findMat = MaterialManager::getMaterialPtr(mat->name);
+				if (findMat)
+				{
+					std::cout << "The material already exists: " << mat->name << std::endl;
+					meshInfo->materials.push_back(findMat);
+
+					continue;
+				}
+				else
+				{
+					std::shared_ptr<Material> material = std::make_shared<Material>();
+					MaterialManager::createMaterialLoaderModule(material, mat->name);
+
+					material->baseColor = Color(mat->getDiffuseColor().r, mat->getDiffuseColor().g, mat->getDiffuseColor().b);
+					material->roughness = 1;
+
+					auto extractFilename = [](std::string textureName) -> std::string {
+						if (!textureName.empty() && textureName.back() == '"') {
+							textureName.pop_back();
+						}
+						size_t found = textureName.find_last_of('\\');
+						if (found == std::string::npos)
+							found = textureName.find_last_of('/');
+						if (found != std::string::npos) {
+							return textureName.substr(found + 1);
+						}
+						else {
+							return textureName;
+						}
+					};
+
+					{
+						auto texture = mat->getTexture(ofbx::Texture::TextureType::DIFFUSE);
+						std::string textureName;
+						if (texture)
+						{
+							auto it = texture->getFileName();
+							for (const ofbx::u8* ptr = it.begin; ptr <= it.end; ++ptr) {
+								textureName += *ptr;
+							}
+
+						}
+
+						if (textureName != std::string("")) {
+							textureName = extractFilename(textureName);
+
+							auto fbxFile = this->varFileName()->getValue();
+							size_t foundPath = fbxFile.string().find_last_of("/") < fbxFile.string().size() ? fbxFile.string().find_last_of("/") : fbxFile.string().find_last_of("\\");
+
+							std::string path = fbxFile.string().substr(0, foundPath);
+
+
+							std::string loadPath = path + std::string("/") + textureName;
+
+							dyno::CArray2D<dyno::Vec4f> textureData(1, 1);
+							textureData[0, 0] = dyno::Vec4f(1);
+
+
+							if (ImageLoader::loadImage(loadPath.c_str(), textureData))// loadTexture
+								material->texColor.assign(textureData);
+						}
+					}
+
+
+					{
+						auto texture = mat->getTexture(ofbx::Texture::TextureType::NORMAL);
+						std::string textureName;
+						if (texture)
+						{
+							auto it = texture->getFileName();
+							for (const ofbx::u8* ptr = it.begin; ptr <= it.end; ++ptr) {
+								textureName += *ptr;
+							}
+						}
+
+						size_t found = textureName.find_last_of("\\");
+
+						if (textureName != std::string("")) {
+							textureName = extractFilename(textureName);
+
+							auto fbxFile = this->varFileName()->getValue();
+							size_t foundPath = fbxFile.string().find_last_of("/") < fbxFile.string().size() ? fbxFile.string().find_last_of("/") : fbxFile.string().find_last_of("\\");
+
+							std::string path = fbxFile.string().substr(0, foundPath);
+
+
+							std::string loadPath = path + std::string("/") + textureName;
+
+							dyno::CArray2D<dyno::Vec4f> textureData(1, 1);
+							textureData[0, 0] = dyno::Vec4f(1);
+
+							if (ImageLoader::loadImage(loadPath.c_str(), textureData))//loadTexture
+								material->texBump.assign(textureData);
+
+						}
+					}
+					meshInfo->materials.push_back(material);
+				}
+
+			}
+
+			//Skin Weights
+			auto pose = currentMesh->getPose();
+
+			if (pose)
+			{
+				std::map<int, int> pointId_Channel;
+
+
+				auto clusterCount = currentMesh->getSkin()->getClusterCount();
+				for (size_t clusterId = 0; clusterId < clusterCount; clusterId++)
+				{
+					auto cluster = currentMesh->getSkin()->getCluster(clusterId);
+
+					auto it = name2Bone.find(cluster->getLink()->name);
+
+					int boneId = it == name2Bone.end() ? -1 : it->second->id;
+
+
+					auto m = cluster->getTransformMatrix().m;//inverseMatrix
+
+					Mat4f inverseM = Mat4f(m[0], m[4], m[8], m[12] * tempScale,
+						m[1], m[5], m[9], m[13] * tempScale,
+						m[2], m[6], m[10], m[14] * tempScale,
+						m[3], m[7], m[11], m[15]);
+
+					bonesInfo[boneId]->inverseBindMatrix = inverseM;
+
+					auto indicesCount = cluster->getIndicesCount();
+
+					meshInfo->resizeSkin(meshInfo->points.size());
+
+
+					for (size_t j = 0; j < indicesCount; j++)
+					{
+						auto indices = cluster->getIndices()[j];
+						auto weights = cluster->getWeights()[j];
+						if (weights <= 0.001)
+							continue;
+						//auto vertices = meshInfo->pointId_verticeId[indices];
+						auto iter = pointId_Channel.find(indices);
+
+						int boneDataIndex = -1;
+						int channel = -1;
+
+						if (iter != pointId_Channel.end())
+						{
+							channel = iter->second;
+							pointId_Channel[indices] = iter->second + 1;
+						}
+						else
+						{
+							channel = 0;
+							pointId_Channel[indices] = 1;
+						}
+
+						boneDataIndex = channel / 4;
+						channel = channel % 4;
+
+						if (boneDataIndex == 0)
+						{
+							//for (auto vId : vertices)
+							//{
+							meshInfo->boneWeights0[indices][channel] = weights;
+							meshInfo->boneIndices0[indices][channel] = boneId;
+							//}
+						}
+						else if (boneDataIndex == 1)
+						{
+							//for (auto vId : vertices)
+							//{
+							meshInfo->boneWeights1[indices][channel] = weights;
+							meshInfo->boneIndices1[indices][channel] = boneId;
+							//}
+						}
+						else if (boneDataIndex == 2)
+						{
+							//for (auto vId : vertices)
+							//{
+							meshInfo->boneWeights2[indices][channel] = weights;
+							meshInfo->boneIndices2[indices][channel] = boneId;
+							//}
+						}
+					}
+				}
+			}
+			meshs.push_back(meshInfo);
+		}
+
+		buildHierarchy(parentTag, nameParentObj);
+
+		//updateTextureMeshLOD
+
+		std::vector<int> mesh_VerticesNum;
+		std::vector<int> mesh_NormalNum;
+		std::vector<int> mesh_UvNum;
+		std::vector<int> mesh_PointsNum;
+
+		std::vector<Vec3f> texVertices;
+		std::vector<Vec3f> texPoints;
+		std::vector<Vec3f> texNormals;
+		std::vector<Vec2f> texCoords;
+
+		CArrayList<int> c_point2Vertice;
+
+		for (auto it : meshs)
+		{
+			mesh_VerticesNum.push_back(it->vertices.size());
+			mesh_NormalNum.push_back(it->normals.size());
+			mesh_UvNum.push_back(it->texcoords.size());
+			mesh_PointsNum.push_back(it->points.size());
+
+			texVertices.insert(texVertices.end(), it->vertices.begin(), it->vertices.end());
+			texPoints.insert(texPoints.end(), it->points.begin(), it->points.end());
+			texNormals.insert(texNormals.end(), it->normals.begin(), it->normals.end());
+			texCoords.insert(texCoords.end(), it->texcoords.begin(), it->texcoords.end());
+		}
+
+		auto texMesh = this->stateTextureMesh()->getDataPtr();
+
+		texMesh->lodGeometry(level)->vertices().assign(texPoints);
+		texMesh->lodGeometry(level)->normals().assign(texNormals);
+		texMesh->lodGeometry(level)->texCoords().assign(texCoords);
+
+		std::vector<uint> shapeID;
+		shapeID.resize(texPoints.size());
+
+		int tempID = 0;
+		int offset = 0;
+		int verticeOffset = 0;
+
+		std::map<int,int> shapeId2MeshId;
+		for (size_t i = 0; i < meshs.size(); i++)
+		{
+
+			int meshFaceGroupNum = meshs[i]->facegroup_triangles.size();
+
+			for (size_t j = 0; j < meshFaceGroupNum; j++)
+			{
+				auto triangles = meshs[i]->facegroup_triangles[j];
+				auto normalIndex = meshs[i]->facegroup_normalIndex[j];
+
+				auto shape = std::make_shared<Shape>();
+				for (size_t k = 0; k < triangles.size(); k++)
+				{
+					triangles[k][0] = triangles[k][0] + offset;
+					triangles[k][1] = triangles[k][1] + offset;
+					triangles[k][2] = triangles[k][2] + offset;
+					shapeID[triangles[k][0]] = tempID;
+					shapeID[triangles[k][1]] = tempID;
+					shapeID[triangles[k][2]] = tempID;
+				}
+
+				for (size_t k = 0; k < normalIndex.size(); k++)
+				{
+					normalIndex[k][0] = normalIndex[k][0] + verticeOffset;
+					normalIndex[k][1] = normalIndex[k][1] + verticeOffset;
+					normalIndex[k][2] = normalIndex[k][2] + verticeOffset;
+				}
+
+				shape->vertexIndex.assign(triangles);
+				shape->normalIndex.assign(normalIndex);
+				shape->texCoordIndex.assign(normalIndex);
+
+				tempID++;
+
+				shape->material = meshs[i]->materials[j];
+				auto hierarchicalScene = this->stateHierarchicalScene()->getDataPtr();
+				
+				int srcMeshId = -1; 
+				std::cout <<"*******************" << "\n";
+
+				for (size_t k = 0; k < hierarchicalScene->mMeshes.size(); k++)
+				{
+					std::cout << int(hierarchicalScene->mMeshes[k]->name == meshs[i]->name) << ":" << hierarchicalScene->mMeshes[k]->name << " : " << meshs[i]->name << "\n";
+					if (hierarchicalScene->mMeshes[k]->name == meshs[i]->name) 
+					{
+						srcMeshId = k;
+						break;
+					}
+				}
+				if (srcMeshId >= 0) 
+				{
+					shapeId2MeshId[srcMeshId] = meshs[i]->id;
+					if (srcMeshId < texMesh->lodShapes(0).size())
+					{
+						texMesh->lodShapes(level).resize(texMesh->lodShapes(0).size());
+						texMesh->lodShapes(level)[srcMeshId] = shape;
+					}
+					else
+						printf("Error Lod source shape Index\n");
+				}
+
+			}
+			offset += mesh_PointsNum[i];
+			verticeOffset += mesh_VerticesNum[i];
+		}
+
+		texMesh->lodGeometry(level)->shapeIds().assign(shapeID);
+
+		//initialPosition.assign(texMesh->geometry()->vertices());
+		//initialNormal.assign(texMesh->geometry()->normals());
+
+
+		std::vector<Mat4f> worldMatrix = this->stateHierarchicalScene()->getDataPtr()->getObjectWorldMatrix();
+		DArray<Mat4f> dWorldMatrix;
+
+		dWorldMatrix.assign(worldMatrix);
+
+		//this->stateHierarchicalScene()->getDataPtr()->updateSkinData(this->stateTextureMesh()->getDataPtr());
+
+		//ToCenter
+		if (varUseInstanceTransform()->getValue())
+		{
+			std::vector<Vec3f> ShapeCenter = texMesh->updateTexMeshBoundingBox(level);
+
+			DArray<Vec3f> unCenterPosition;
+			DArray<Vec3f> d_ShapeCenter;
+
+			d_ShapeCenter.assign(ShapeCenter);	// Used to "ToCenter"
+			unCenterPosition.assign(this->stateTextureMesh()->getDataPtr()->lodGeometry(level)->vertices());
+
+
+			this->stateHierarchicalScene()->getDataPtr()->shapeToCenter(unCenterPosition,
+				this->stateTextureMesh()->getDataPtr()->lodGeometry(level)->vertices(),
+				this->stateTextureMesh()->getDataPtr()->lodGeometry(level)->shapeIds(),
+				d_ShapeCenter
+			);
+
+		}
+
+
+		return false;
 	}
 
 
@@ -1115,8 +1649,6 @@ namespace dyno
 
 			d_ShapeCenter.assign(initialShapeCenter);	// Used to "ToCenter"
 			unCenterPosition.assign(this->stateTextureMesh()->getDataPtr()->geometry()->vertices());
-			CArray<Vec3f> cshapeCenter;
-			cshapeCenter.assign(d_ShapeCenter);
 
 			this->stateHierarchicalScene()->getDataPtr()->shapeToCenter(unCenterPosition,
 				this->stateTextureMesh()->getDataPtr()->geometry()->vertices(),
@@ -1170,6 +1702,27 @@ namespace dyno
 		}
 	}
 
+	void updatelodTransform(int level,bool useInstanceTransform, std::vector<std::shared_ptr<Shape>> shapes , std::vector<Vec3f> initialShapeCenter,Vec3f scale, Vec3f location,Quat<Real> quat)
+	{
+		if (useInstanceTransform)
+		{
+			for (size_t i = 0; i < shapes.size(); i++)
+			{
+				shapes[i]->boundingTransform.translation() = quat.rotate(initialShapeCenter[i]) * scale + location;
+				shapes[i]->boundingTransform.rotation() = quat.toMatrix3x3();
+				shapes[i]->boundingTransform.scale() = scale;
+			}
+		}
+		else
+		{
+			for (size_t i = 0; i < shapes.size(); i++)
+			{
+				shapes[i]->boundingTransform.translation() = Vec3f(0);
+			}
+		}
+
+	}
+
 	template<typename TDataType>
 	void FBXLoader<TDataType>::updateTransform()
 	{
@@ -1179,28 +1732,41 @@ namespace dyno
 			updateAnimation(0);
 		else
 		{
-			auto& shape = this->stateTextureMesh()->getDataPtr()->shapes();
-			auto vertices = this->stateTextureMesh()->getDataPtr()->geometry()->vertices();
-			CArray<Vec3f> cv;
-			cv.assign(vertices);
 
-			if (varUseInstanceTransform()->getValue())
+			for (size_t i = 0; i < 3; i++)
 			{
-				for (size_t i = 0; i < shape.size(); i++)
-				{
-					auto quat = this->computeQuaternion();
-					shape[i]->boundingTransform.translation() = quat.rotate(initialShapeCenter[i]) * this->varScale()->getValue() + this->varLocation()->getValue();
-					shape[i]->boundingTransform.rotation() = quat.toMatrix3x3();
-					shape[i]->boundingTransform.scale() = this->varScale()->getValue();
-				}
+				auto& shapes = this->stateTextureMesh()->getDataPtr()->lodShapes(i);
+				auto vertices = this->stateTextureMesh()->getDataPtr()->lodGeometry(i)->vertices();
+
+				updatelodTransform(
+					i,
+					varUseInstanceTransform()->getValue(),
+					shapes,
+					initialShapeCenter,
+					this->varScale()->getValue(),
+					this->varLocation()->getValue(),
+					this->computeQuaternion()
+				);
 			}
-			else
-			{
-				for (size_t i = 0; i < shape.size(); i++)
-				{
-					shape[i]->boundingTransform.translation() = Vec3f(0);
-				}
-			}
+
+
+			//if (varUseInstanceTransform()->getValue())
+			//{
+			//	for (size_t i = 0; i < shape.size(); i++)
+			//	{
+			//		auto quat = this->computeQuaternion();
+			//		shape[i]->boundingTransform.translation() = quat.rotate(initialShapeCenter[i]) * this->varScale()->getValue() + this->varLocation()->getValue();
+			//		shape[i]->boundingTransform.rotation() = quat.toMatrix3x3();
+			//		shape[i]->boundingTransform.scale() = this->varScale()->getValue();
+			//	}
+			//}
+			//else
+			//{
+			//	for (size_t i = 0; i < shape.size(); i++)
+			//	{
+			//		shape[i]->boundingTransform.translation() = Vec3f(0);
+			//	}
+			//}
 
 		}
 	}

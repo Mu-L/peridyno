@@ -76,7 +76,9 @@ namespace dyno
 
 		void transform();
 
-		void varChanged();
+		void fileChanged();
+
+		virtual void onTexMeshLoad();
 
 	protected:
 

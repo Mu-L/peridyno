@@ -28,7 +28,7 @@ namespace dyno
 
 		this->stateTextureMesh()->setDataPtr(std::make_shared<TextureMesh>());
 
-		auto callback = std::make_shared<FCallBackFunc>(std::bind(&ArticulatedBody<TDataType>::varChanged, this));
+		auto callback = std::make_shared<FCallBackFunc>(std::bind(&ArticulatedBody<TDataType>::fileChanged, this));
 		this->varFilePath()->attach(callback);
 
 		auto saveCallback = std::make_shared<FCallBackFunc>(std::bind(&ArticulatedBody<TDataType>::saveToFile, this));
@@ -149,9 +149,10 @@ namespace dyno
 	}
 
 	template<typename TDataType>
-	void ArticulatedBody<TDataType>::varChanged()
+	void ArticulatedBody<TDataType>::fileChanged()
 	{
 		std::shared_ptr<TextureMesh> texMesh = this->stateTextureMesh()->constDataPtr();
+		texMesh->clear();
 		auto filepath = this->varFilePath()->getValue();
 
 		auto ext = filepath.path().extension().string();
@@ -170,6 +171,12 @@ namespace dyno
 		else if (ext == ".xml") {
 			loadTextureMeshFromXml(texMesh, name, mObjects, mAssets, mJoints, this->varDoTransform()->getValue());
 		}
+		onTexMeshLoad();
+	}
+
+	template<typename TDataType>
+	void ArticulatedBody<TDataType>::onTexMeshLoad()
+	{
 	}
 
 	template<typename TDataType>

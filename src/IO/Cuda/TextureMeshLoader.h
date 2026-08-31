@@ -6,11 +6,12 @@
 
 #include "Topology/TriangleSet.h"
 #include "Topology/TextureMesh.h"
+#include "Topology/TextureMeshInterface.h"
 
 namespace dyno
 {
 
-	class TextureMeshLoader : public ParametricModel<DataType3f>
+	class TextureMeshLoader : public ParametricModel<DataType3f>, public TextureMeshInterface
 	{
 		DECLARE_CLASS(TextureMeshLoader)
 	public:
@@ -25,6 +26,10 @@ namespace dyno
 		DEF_VAR(bool, UseInstanceTransform, true, "");
 
 		DEF_INSTANCE_STATE(TextureMesh, TextureMesh, "");
+
+	public:
+
+		virtual FInstance<TextureMesh>* getTextureMesh()override { return this->stateTextureMesh(); }
 
 	protected:
 		void resetStates() override;

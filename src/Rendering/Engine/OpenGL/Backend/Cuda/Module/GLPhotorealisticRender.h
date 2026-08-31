@@ -57,6 +57,12 @@ namespace dyno
 		XBuffer<Vec3f> mTangent;
 		XBuffer<Vec3f> mBitangent;
 
+		XBuffer<Vec3f> mTangentLOD1;
+		XBuffer<Vec3f> mBitangentLOD1;
+
+		XBuffer<Vec3f> mTangentLOD2;
+		XBuffer<Vec3f> mBitangentLOD2;
+
 		XBuffer<Transform3f> mShapeTransform;
 
 		Program* mShaderProgram;

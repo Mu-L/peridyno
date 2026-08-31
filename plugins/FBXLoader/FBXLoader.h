@@ -27,6 +27,8 @@
 #include "Topology/TriangleSet.h"
 #include "Topology/PolygonSet.h"
 #include "Topology/HierarchicalModel.h"
+#include "Topology/TextureMeshInterface.h"
+
 #define REFTIME 46186158000L
 
 
@@ -39,7 +41,7 @@ namespace dyno
 	
 	
 	template<typename TDataType>
-	class FBXLoader : public ParametricModel<TDataType>
+	class FBXLoader : public ParametricModel<TDataType>, public TextureMeshInterface
 	{
 		DECLARE_TCLASS(FBXLoader, TDataType)
 	public:
@@ -56,6 +58,10 @@ namespace dyno
 		* @brief FBX file
 		*/
 		DEF_VAR(FilePath, FileName, "", "");
+		DEF_VAR(FilePath, LOD1, "", "");
+		DEF_VAR(FilePath, LOD2, "", "");
+
+
 		DEF_VAR(bool, ImportAnimation, true, "ImportAnimation");
 		//DEF_VAR(bool, RecalculateNormal, false, "RecalculateNormal");
 		//DEF_VAR(bool, FlipNormal, false, "FlipNormal");
@@ -79,10 +85,15 @@ namespace dyno
 		DEF_VAR(Real, Radius, 0.0075, "Radius of Capsule");
 		DEF_VAR(Real, AnimationSpeed, 1, "Speed");
 
+	public:
+
+		virtual FInstance<TextureMesh>* getTextureMesh()override { return this->stateTextureMesh(); }
 
 	protected:
 
 		bool initFBX();
+
+		bool loadLOD(FilePath filePath,int level = 1);
 
 		void varAnimationChange();
 

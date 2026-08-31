@@ -1006,7 +1006,7 @@ namespace dyno
 			}
 
 			RigidBodyTuple rigid = RigidBodyTuple(
-				"Rigid",
+				"Rigid" + std::to_string(rigidInfo.bodyId),
 				rId,
 				rigidInfo.angle,
 				rigidInfo.linearVelocity,
@@ -1043,10 +1043,8 @@ namespace dyno
 			config.varJointConfigs()->pushBack(
 				MultiBodyJointTuple
 				(
-					"",
-					ballJoint[ejId].bodyId1,
-					"",
-					ballJoint[ejId].bodyId2,
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId1),
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId2),
 					anchor_point,
 					true,
 					false,
@@ -1073,10 +1071,8 @@ namespace dyno
 			config.varJointConfigs()->pushBack(
 				MultiBodyJointTuple
 				(
-					"",
-					sliderJoint[ejId].bodyId1,
-					"",
-					sliderJoint[ejId].bodyId2,
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId1),
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId2),
 					anchor_point,
 					true,
 					sliderJoint[ejId].useMoter,
@@ -1103,10 +1099,8 @@ namespace dyno
 			config.varJointConfigs()->pushBack(
 				MultiBodyJointTuple
 				(
-					"",
-					hingeJoint[ejId].bodyId1,
-					"",
-					hingeJoint[ejId].bodyId2,
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId1),
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId2),
 					anchor_point,
 					true,
 					hingeJoint[ejId].useMoter,
@@ -1130,10 +1124,8 @@ namespace dyno
 			config.varJointConfigs()->pushBack(
 				MultiBodyJointTuple
 				(
-					"",
-					fixedJoint[ejId].bodyId1,
-					"",
-					fixedJoint[ejId].bodyId2,
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId1),
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId2),
 					anchor_point,
 					true,
 					false,
@@ -1155,10 +1147,8 @@ namespace dyno
 			config.varJointConfigs()->pushBack(
 				MultiBodyJointTuple
 				(
-					"",
-					pointJoint[ejId].bodyId1,
-					"",
-					pointJoint[ejId].bodyId2,
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId1),
+					"Rigid" + std::to_string(ballJoint[ejId].bodyId2),
 					pointJoint[ejId].anchorPoint - pointJoint[ejId].actor1->center,
 					true,
 					false,

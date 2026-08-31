@@ -31,7 +31,63 @@ namespace dyno
 	//ConfigurableVehicle
 	IMPLEMENT_TCLASS(ConfigurableBody, TDataType)
 
-		template<typename TDataType>
+	namespace path_helper
+	{
+		static bool isDataAbsolutePath(const std::string& filePath)
+		{
+			std::string assetPath = getAssetPath();
+
+			std::string normFile = filePath;
+			std::string normAsset = assetPath;
+
+			for (size_t i = 0; i < normFile.size(); i++)
+				if (normFile[i] == '\\') normFile[i] = '/';
+			for (size_t i = 0; i < normAsset.size(); i++)
+				if (normAsset[i] == '\\') normAsset[i] = '/';
+
+			if (!normAsset.empty() && normAsset.back() != '/')
+				normAsset += '/';
+
+			if (normFile.size() < normAsset.size())
+				return false;
+
+			for (size_t i = 0; i < normAsset.size(); i++)
+			{
+				char cf = normFile[i];
+				char ca = normAsset[i];
+				if (cf >= 'A' && cf <= 'Z') cf += 32;
+				if (ca >= 'A' && ca <= 'Z') ca += 32;
+				if (cf != ca)
+					return false;
+			}
+
+			return true;
+		}
+
+		static std::string getRelativeToDataPath(const std::string& filePath)
+		{
+			if (!isDataAbsolutePath(filePath))
+				return filePath;
+
+			std::string assetPath = getAssetPath();
+
+			std::string normFile = filePath;
+			std::string normAsset = assetPath;
+
+			for (size_t i = 0; i < normFile.size(); i++)
+				if (normFile[i] == '\\') normFile[i] = '/';
+			for (size_t i = 0; i < normAsset.size(); i++)
+				if (normAsset[i] == '\\') normAsset[i] = '/';
+
+			if (!normAsset.empty() && normAsset.back() != '/')
+				normAsset += '/';
+
+			return normFile.substr(normAsset.size());
+		}
+
+	}
+
+	template<typename TDataType>
 	ConfigurableBody<TDataType>::ConfigurableBody()
 		: ParametricModel<TDataType>()
 		, ArticulatedBody<TDataType>()
@@ -103,6 +159,9 @@ namespace dyno
 		this->graphicsPipeline()->pushModule(triElement);
 		this->graphicsPipeline()->pushModule(surfaceRender);
 
+		auto assetCallback = std::make_shared<FCallBackFunc>(std::bind(&ConfigurableBody<TDataType>::onTexMeshLoad, this));
+		this->varConfiguration()->getValue().varAssetConfigs()->attach(assetCallback);
+
 	}
 
 	template<typename TDataType>
@@ -112,16 +171,15 @@ namespace dyno
 	}
 
 	template<typename TDataType>
-	void ConfigurableBody<TDataType>::saveToFile()
+	void ConfigurableBody<TDataType>::saveToPath(std::string path)
 	{
-		auto fileStr = this->varFilePath()->serialize();
-	
+		auto fileString = this->varFilePath()->serialize();
+
 		SceneLoaderXML saveHelper;
-		FilePath path = this->varSaveConfigPath()->getValue();
 		tinyxml2::XMLDocument doc;
 
 		tinyxml2::XMLElement* file = doc.NewElement("MeshFile");
-		saveHelper.serializeField(this->varFilePath(), file, doc);
+		file->SetText(path_helper::getRelativeToDataPath(fileString).c_str());
 		doc.InsertFirstChild(file);
 
 		tinyxml2::XMLElement* transform = doc.NewElement("Transform");
@@ -132,7 +190,14 @@ namespace dyno
 		saveHelper.serializeField(this->varConfiguration(), config, doc);
 		doc.InsertFirstChild(config);
 
-		doc.SaveFile(path.string().c_str());
+		doc.SaveFile(path.c_str());
+	}
+
+	template<typename TDataType>
+	void ConfigurableBody<TDataType>::saveToFile()
+	{
+		FilePath path = this->varSaveConfigPath()->getValue();
+		saveToPath(path.string());
 	}
 
 	template<typename TDataType>
@@ -148,6 +213,8 @@ namespace dyno
 			return ;
 		}
 
+		this->varConfiguration()->setValue(MultiBodyTuple());
+
 		SceneLoaderXML saveHelper;
 
 		std::map<std::string, FBase*> fieldMap;
@@ -162,7 +229,12 @@ namespace dyno
 
 		tinyxml2::XMLElement* texfileXmls = doc.FirstChildElement("MeshFile");
 		if(texfileXmls)
-			saveHelper.deserializeField(texfileXmls, fieldMap);
+		{
+			const char* text = texfileXmls->GetText();
+			std::string path = std::string(text);
+			path = path_helper::isDataAbsolutePath(path) ? path : getAssetPath() + path;
+			this->varFilePath()->setValue(FilePath(path));
+		}
 
 		tinyxml2::XMLElement* transXmls = doc.FirstChildElement("Transform");
 		if(transXmls)
@@ -172,21 +244,25 @@ namespace dyno
 		if(configXmls)
 			saveHelper.deserializeField(configXmls, fieldMap);
 
-
+		this->fileChanged();
+		this->updateConfig();
 	}
 
 	ElementType ToElementType(RigidShapeType configShape)
 	{
 		switch (configShape)
 		{
-		case SHAPE_BOX:       return ET_BOX;
-		case SHAPE_TET:       return ET_TET;
-		case SHAPE_CAPSULE:   return ET_CAPSULE;
-		case SHAPE_SPHERE:    return ET_SPHERE;
-		case SHAPE_TRI:       return ET_TRI;
-		case SHAPE_COMPOUND:  return ET_COMPOUND;
-		case SHAPE_Other:     return ET_Other;
-		default:              return ET_Other; 
+		case SHAPE_BOX:			     return ET_BOX;
+		case SHAPE_TET:				 return ET_TET;
+		case SHAPE_CAPSULE:			 return ET_CAPSULE;
+		case SHAPE_SPHERE:			 return ET_SPHERE;
+		case SHAPE_TRI:				 return ET_TRI;
+		case SHAPE_COMPOUND:		 return ET_COMPOUND;
+		case SHAPE_MEDIALCONE:		 return ET_MEDIALCONE;
+		case SHAPE_MEDIALSLAB:		 return ET_MEDIALSLAB;
+		case SHAPE_Other:			 return ET_Other;
+
+		default:					 return ET_Other; 
 		}
 	}
 
@@ -221,118 +297,31 @@ namespace dyno
 		}
 	}
 
+
+
+
 	template<typename TDataType>
 	void ConfigurableBody<TDataType>::updateConfig()
 	{
 		this->clearRigidBodySystem();
 		this->clearVechicle();
 
-		if (!this->inTextureMesh()->isEmpty())
+		if (this->stateTextureMesh()->isEmpty() && (!this->varFilePath()->getValue().string().empty() || this->varConfiguration()->getValue().varAssetConfigs()->size()))
 		{
-			this->stateTextureMesh()->setDataPtr(this->inTextureMesh()->constDataPtr());
+			ArticulatedBody<TDataType>::fileChanged();
 		}
-		else if (this->stateTextureMesh()->isEmpty()) 
-		{
-			ArticulatedBody<TDataType>::varChanged();
-		}
-		std::cout << this->varConfiguration()->getValue().varRigidBodyConfigs()->size()<<"\n";
+
+		if(!this->inTextureMesh()->isEmpty() && this->stateTextureMesh()->constDataPtr()->shapes().size() == 0)
+			this->stateTextureMesh()->getDataPtr()->assign(this->inTextureMesh()->constDataPtr());
+
+		auto texMesh = this->stateTextureMesh()->constDataPtr();
+
 		if (!this->varConfiguration()->getValue().isValid() || !bool(this->varVehiclesTransform()->size()) || this->stateTextureMesh()->isEmpty())
 			return;
 
-		auto texMesh = this->stateTextureMesh()->constDataPtr();
 		auto&& config = this->varConfiguration()->getValue();
 
 		auto rigidInfo = config.varRigidBodyConfigs();
-		std::cout << rigidInfo;
-
-		for (auto it = rigidInfo->begin(); it != rigidInfo->end(); it++)
-		{
-			auto rigid = rigidInfo->getElement(it);
-			auto shapeName = rigid.varShapeName()->getValue();
-			std::cout << "ShapeName: " << shapeName <<"\n";
-			auto rigidBodyID = rigid.varRigidBodyId()->getValue();
-			std::cout << "RigidBodyID: " << rigidBodyID <<"\n";
-			auto angle = rigid.varAngel()->getValue();
-			std::cout << "Angle: " << angle.x << ", " << angle.y << ", " << angle.z << ", " << angle.w << "\n";
-			auto linearVelocity = rigid.varLinearVelocity()->getValue();
-			std::cout << "linearVelocity: " << linearVelocity.x << ", " << linearVelocity.y << ", " << linearVelocity.z << "\n";
-			auto angularVelocity = rigid.varAngularVelocity()->getValue();
-			std::cout << "angularVelocity: " << angularVelocity.x << ", " << angularVelocity.y << ", " << angularVelocity.z << "\n";
-			auto position = rigid.varPosition()->getValue();
-			std::cout << "position: " << position.x << ", " << position.y << ", " << position.z << "\n";
-			auto offset = rigid.varOffset()->getValue();
-			std::cout << "offset: " << offset.x << ", " << offset.y << ", " << offset.z << "\n";
-			auto inertia = rigid.varInertia()->getValue();
-			std::cout << "inertia: " << inertia(0, 0) << ", " << inertia(0, 1) << ", " << inertia(0, 2) << "\n" << inertia(1, 0) << ", " << inertia(1, 1) << ", " << inertia(1, 2) << "\n" << inertia(2, 0) << ", " << inertia(2, 1) << ", " << inertia(2, 2) << "\n";
-			auto friction = rigid.varFriction()->getValue();
-			std::cout << "friction: " << friction << "\n";
-			auto restitution = rigid.varRestitution()->getValue();
-			std::cout << "restitution: " << restitution << "\n";
-			auto motionType = rigid.varMotionType()->getValue();
-			std::cout << "motionType: " << motionType.currentString() << "\n";
-			auto shapeType = rigid.varShapeType()->getValue();
-			std::cout << "shapeType: " << shapeType.currentString() << "\n";
-			auto collisionMask = rigid.varCollisionMask()->getValue();
-			std::cout << "collisionMask: " << collisionMask.currentString() << "\n";
-			auto ConfigGroup = rigid.varConfigGroup()->getValue();
-			std::cout << "ConfigGroup: " << ConfigGroup << "\n";
-
-			auto visualShapeIds = rigid.varVisualShapeIds();
-			for (auto visualIdIterator = visualShapeIds->begin(); visualIdIterator != visualShapeIds->end(); visualIdIterator++)
-			{
-				auto visualID = visualShapeIds->getElement(visualIdIterator);
-				std::cout << "    visualShapeIds: " << visualID << "\n";
-
-			}
-
-			auto shapeConfigs = rigid.varShapeConfigs();
-			for (auto shapeIterator = shapeConfigs->begin(); shapeIterator != shapeConfigs->end(); shapeIterator++) 
-			{
-				auto shape = shapeConfigs->getElement(shapeIterator);
-
-				std::cout << "		 shapeConfigs: " << "\n";
-				std::cout << "       capsuleLength: " << shape.varCapsuleLength()->getValue() << "\n";
-				auto center = shape.varCenter()->getValue();
-				std::cout << "       center: " << center.x << ", " << center.y << ", " << center.z << "\n";
-				std::cout << "       density: " << shape.varDensity()->getValue() << "\n";
-				auto halfLength = shape.varHalfLength()->getValue();
-				std::cout << "       halfLength: " << halfLength.x << "," << halfLength.y << "," << halfLength.z << "\n";
-				std::cout << "       radius: " << shape.varRadius()->getValue() << "\n";
-				auto rot = shape.varRot()->getValue();
-				std::cout << "       rot: " << rot.x << "," << rot.y << "," << rot.z << "," << rot.w << "\n";
-				auto shapeType = shape.varShapeType()->getValue();
-				std::cout << "       shapeType: " << shapeType.currentString() << "\n";
-			}
-
-		}
-
-		const auto jointInfo = config.varJointConfigs();
-		for (auto jointIterator = jointInfo->begin(); jointIterator != jointInfo->end(); jointIterator++)
-		{
-			auto joint = jointInfo->getElement(jointIterator);
-
-			std::cout << "mJointType: " << joint.varJointType()->getValue().currentString() << "\n";
-			std::cout << "ARigidBodyName: " << joint.varAShapeName()->getValue() << "\n";
-			std::cout << "BRigidBodyName: " << joint.varBShapeName()->getValue() << "\n";
-			auto anchorPoint = joint.varAnchorPoint()->getValue();
-			std::cout << "mAnchorPoint: " << anchorPoint.x << "," << anchorPoint.y << "," << anchorPoint.z << "\n";
-
-			std::cout << "mUseMoter: " << joint.varUseMoter()->getValue() << "\n";
-			std::cout << "mUseRange: " << joint.varUseRange()->getValue() << "\n";
-			std::cout << "mMax: " << joint.varRange()->getValue().y << "\n";
-			std::cout << "mMin: " << joint.varRange()->getValue().x << "\n";
-			std::cout << "mMoter: " << joint.varMoter()->getValue() << "\n";
-			auto axis = joint.varAxis()->getValue();
-			std::cout << "mAxis: " << axis.x << "," << axis.y << "," << axis.z << "\n";
-			auto q = joint.varQ()->getValue();
-			std::cout << "q: " << q.x << "," << q.y << "," << q.z << ","<< q.w << "\n";
-			auto r1 = joint.varR1()->getValue();
-			auto r2 = joint.varR2()->getValue();
-			std::cout << "r1: " << r1.x << "," << r1.y << "," << r1.z << "\n";
-			std::cout << "r2: " << r2.x << "," << r2.y << "," << r2.z << "\n";
-			auto distance = joint.varDistance()->getValue();
-			std::cout << "distance: " << distance << "\n";
-		}
 
 		// **************************** Create RigidBody  **************************** //
 		auto instances = this->varVehiclesTransform();
@@ -354,17 +343,22 @@ namespace dyno
 			std::vector<std::shared_ptr<PdActor>> Actors;
 			Actors.resize(rigidInfo->size());
 			int i = -1;
+			std::map<std::string, int> rigidName2Id;
+
 			for (auto rigidIterator = rigidInfo->begin(); rigidIterator != rigidInfo->end(); rigidIterator++)
 			{
 				i++;
 				auto rigid = rigidInfo->getElement(rigidIterator);
+				
+				rigidName2Id[rigid.varShapeName()->getValue()] = i;
+
 				int visualId = -1;
 				std::shared_ptr<Shape> visualShapePtr = NULL;
 				if (rigid.varVisualShapeIds()->size())
 				{
 					int validIndex = int(texMesh->shapes().size()) - 1;
-								
-					if(rigid.varVisualShapeIds()->size())
+
+					if (rigid.varVisualShapeIds()->size())
 						visualId = rigid.varVisualShapeIds()->getElement(rigid.varVisualShapeIds()->begin());
 
 					if (visualId <= validIndex && visualId >= 0)
@@ -376,46 +370,22 @@ namespace dyno
 						visualId = texMesh->shapes().size() - 1;
 					}
 				}
-				
+
 				RigidBodyInfo rigidbody;
 
 				rigidbody.bodyId = j * maxGroup + rigid.varConfigGroup()->getValue();
 				rigidbody.angle = rigid.varAngel()->getValue() * Quat<Real>(instance.rotation());
 				rigidbody.linearVelocity = rigid.varLinearVelocity()->getValue();
 				rigidbody.angularVelocity = rigid.varAngularVelocity()->getValue();
-				
-				if (!visualShapePtr) 
-				{
-					if (std::isnan(rigidbody.position.x))
-					{
-						rigidbody.position = Vec3f(0);
-					}
-					else
-						rigidbody.position = rigid.varPosition()->getValue();
-				}
-				else 
-				{
-					if (std::isnan(rigidbody.position.x))
-					{
-						rigidbody.position = visualShapePtr->boundingTransform.translation();
-					}
-					else 
-					{
-						rigidbody.position = visualShapePtr->boundingTransform.translation() + rigidbody.position;
-					}
-				}
-				
-				rigidbody.position = Quat<Real>(instance.rotation()).rotate(rigidbody.position) + instance.translation();
 
-				rigidbody.offset = rigid.varOffset()->getValue();
-				rigidbody.inertia = rigid.varInertia()->getValue();
-				rigidbody.friction = rigid.varFriction()->getValue() == -1 ? this->varFrictionCoefficient()->getValue() : rigid.varFriction()->getValue();
-				rigidbody.restitution = rigid.varRestitution()->getValue();
-				rigidbody.motionType = ToBodyType(rigid.varMotionType()->currentKey());
-				rigidbody.shapeType = ElementType::ET_COMPOUND;
-				rigidbody.collisionMask = ToCollisionMask(rigid.varCollisionMask()->currentKey());
-				
-				Actors[i] = this->createRigidBody(rigidbody);
+				if (!visualShapePtr)
+				{
+					rigidbody.position = rigid.varPosition()->getValue();
+				}
+				else
+				{
+					rigidbody.position = visualShapePtr->boundingTransform.translation() + rigidbody.position;
+				}
 
 				for (auto elementIterator = rigid.varShapeConfigs()->begin(); elementIterator != rigid.varShapeConfigs()->end(); elementIterator++)
 				{
@@ -431,8 +401,102 @@ namespace dyno
 						T = visualShapePtr->boundingTransform.translation();
 					}
 
-					switch (element.varShapeType()->currentKey())
+					//ma
+					bool matReady = false;
+					if (!element.varMaAssetName()->getValue().empty())
 					{
+						auto maName = element.varMaAssetName()->getValue();
+						const float scaleFactor = rigid.varScale()->getValue().x;
+
+						auto vIter = Vertices.find(maName);
+						auto eIter = Edges.find(maName);
+						auto fIter = Faces.find(maName);
+
+						matReady = vIter != Vertices.end() && eIter != Edges.end() && fIter != Faces.end();
+
+						if (matReady)
+						{
+							const float scale2 = scaleFactor * scaleFactor;
+							const float scale3 = scale2 * scaleFactor;
+							const float scale5 = scale3 * scale2;
+							MedialConeInfo medalcone;
+							MedialSlabInfo medalslab;
+
+							rigidbody.mass = mVolume[maName] * scale3 * element.varDensity()->getValue();
+							rigidbody.inertia = this->mInertialMatrix[maName] * (scale5 * element.varDensity()->getValue());
+							rigidbody.mass = mVolume[maName] * scale3 * element.varDensity()->getValue();
+							rigidbody.friction = rigid.varFriction()->getValue() == -1 ? this->varFrictionCoefficient()->getValue() : rigid.varFriction()->getValue();
+							rigidbody.position = rigid.varPosition()->getValue();
+							rigidbody.angle = rigid.varAngel()->getValue();
+							rigidbody.linearVelocity = rigid.varLinearVelocity()->getValue();
+							rigidbody.angularVelocity = rigid.varAngularVelocity()->getValue();
+							rigidbody.motionType = ToBodyType(rigid.varMotionType()->currentKey());
+							rigidbody.bodyId = j * maxGroup + rigid.varConfigGroup()->getValue();;
+
+							Actors[i] = this->createRigidBody(rigidbody, false);
+
+							if (Actors[i] != nullptr)
+							{
+								auto& vertices = this->Vertices[maName];
+								auto& edges = this->Edges[maName];
+								auto& faces = this->Faces[maName];
+								for (size_t j = 0; j < edges.size(); j++)
+								{
+									Vec2i edge = edges[j];
+									if (edge[0] >= vertices.size() || edge[1] >= vertices.size())
+									{
+										std::cerr << "ERROR load edge" << std::endl;
+										continue;
+									}
+									medalcone.v[0] = (Vec3f(vertices[edge[0]][0], vertices[edge[0]][1], vertices[edge[0]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalcone.v[1] = (Vec3f(vertices[edge[1]][0], vertices[edge[1]][1], vertices[edge[1]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalcone.radius[0] = vertices[edge[0]][3] * scaleFactor;
+									medalcone.radius[1] = vertices[edge[1]][3] * scaleFactor;
+									this->bindMedialCone(Actors[i], medalcone);
+								}
+
+								for (size_t j = 0; j < faces.size(); j++)
+								{
+									Vec3i face = faces[j];
+									if (face[0] >= vertices.size() || face[1] >= vertices.size() || face[2] >= vertices.size())
+									{
+										std::cerr << "ERROR load face" << std::endl;
+										continue;
+									}
+
+
+									medalslab.v[0] = (Vec3f(vertices[face[0]][0], vertices[face[0]][1], vertices[face[0]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalslab.v[1] = (Vec3f(vertices[face[1]][0], vertices[face[1]][1], vertices[face[1]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalslab.v[2] = (Vec3f(vertices[face[2]][0], vertices[face[2]][1], vertices[face[2]][2]) - mBaryCenter[maName]) * scaleFactor;
+									medalslab.radius[0] = vertices[face[0]][3] * scaleFactor;
+									medalslab.radius[1] = vertices[face[1]][3] * scaleFactor;
+									medalslab.radius[2] = vertices[face[2]][3] * scaleFactor;
+									this->bindMedialSlab(Actors[i], medalslab);
+								}
+							}
+
+							visualId = mName2texMeshID[maName][0];
+						}
+						else
+							continue;
+					}
+					else		// BasicShape 
+					{
+						rigidbody.position = Quat<Real>(instance.rotation()).rotate(rigidbody.position) + instance.translation();
+
+						rigidbody.offset = rigid.varOffset()->getValue();
+						rigidbody.inertia = rigid.varInertia()->getValue();
+						rigidbody.friction = rigid.varFriction()->getValue() == -1 ? this->varFrictionCoefficient()->getValue() : rigid.varFriction()->getValue();
+						rigidbody.restitution = rigid.varRestitution()->getValue();
+						rigidbody.motionType = ToBodyType(rigid.varMotionType()->currentKey());
+						rigidbody.shapeType = ElementType::ET_COMPOUND;
+						rigidbody.collisionMask = ToCollisionMask(rigid.varCollisionMask()->currentKey());
+
+						Actors[i] = this->createRigidBody(rigidbody);
+
+						//Basic Shape
+						switch (element.varShapeType()->currentKey())
+						{
 						case SHAPE_BOX:
 						{
 							BoxInfo currentBox;
@@ -448,7 +512,7 @@ namespace dyno
 						}
 
 						break;
-						case SHAPE_TET: 
+						case SHAPE_TET:
 						{
 							TetInfo currentTet;
 							float Length = 0;
@@ -456,9 +520,9 @@ namespace dyno
 							{
 								auto tetCord = element.varTet()->getElement(tetIterator);
 								Length += tetCord.norm();
-							}	
+							}
 
-							if(Length == 0 )
+							if (Length == 0)
 							{
 								std::vector<Vector<Real, 3>> v[4];
 								currentTet.v[0] = (visualShapePtr ? down : Vec3f(0));
@@ -466,7 +530,7 @@ namespace dyno
 								currentTet.v[2] = (visualShapePtr ? Vec3f(up.x, down.y, up.z) : Vec3f(0, 1, 0));
 								currentTet.v[3] = (visualShapePtr ? Vec3f(up) : Vec3f(0, 0, 1));
 							}
-							else if(Length > 0)
+							else if (Length > 0)
 							{
 								int tetId = 0;
 								for (auto tetIterator = element.varTet()->begin(); tetIterator != element.varTet()->end(); tetIterator++)
@@ -491,11 +555,11 @@ namespace dyno
 								currentCapsule.halfLength = element.varCapsuleLength()->getValue();
 								currentCapsule.radius = element.varRadius()->getValue();
 							}
-							else 
+							else
 							{
 								if (element.varCapsuleLength()->getValue() == 0 && visualShapePtr)
 									currentCapsule.halfLength = (up.y - down.y) / 2;
-								else if(element.varCapsuleLength()->getValue() != 0)
+								else if (element.varCapsuleLength()->getValue() != 0)
 									currentCapsule.halfLength = element.varCapsuleLength()->getValue();
 
 								if (element.varRadius()->getValue() == 0 && visualShapePtr)
@@ -507,7 +571,7 @@ namespace dyno
 							this->bindCapsule(Actors[i], currentCapsule, element.varDensity()->getValue());
 							break;
 						}
-						case SHAPE_SPHERE: 
+						case SHAPE_SPHERE:
 						{
 							SphereInfo currentSphere;
 							currentSphere.center = element.varCenter()->getValue();
@@ -516,7 +580,7 @@ namespace dyno
 							{
 								currentSphere.radius = std::abs(up.y - down.y) / 2;
 							}
-							else 
+							else
 							{
 								currentSphere.radius = element.varRadius()->getValue();
 							}
@@ -525,13 +589,15 @@ namespace dyno
 						}
 						default:
 							break;
+						}
 					}
+
 				}
 
-				if (visualId!= -1 && Actors[i] != NULL)
+				if (visualId != -1 && Actors[i] != NULL)
 				{
 					////bindShapetoActor
-					this->bindShape(Actors[i], Pair<uint, uint>(visualId, j));
+					this->bindShape(Actors[i], Pair<uint, uint>(visualId, j), rigid.varScale()->getValue());
 				}
 			}
 
@@ -541,8 +607,15 @@ namespace dyno
 				auto jointDetail = jointInfo->getElement(jointIterator);
 				//Actor
 				auto type = jointDetail.varJointType()->currentKey();
-				int first = jointDetail.varARigidBodyId()->getValue();
-				int second = jointDetail.varBRigidBodyId()->getValue();
+				auto A = jointDetail.varAShapeName()->getValue();
+				auto B = jointDetail.varBShapeName()->getValue();
+				auto AItor= rigidName2Id.find(A);
+				auto BItor= rigidName2Id.find(B);
+				if (AItor == rigidName2Id.end() || BItor == rigidName2Id.end())
+					continue;
+
+				int first = AItor->second;
+				int second = BItor->second;
 				Real speed = jointDetail.varMoter()->getValue();
 				auto axis = Quat1f(instance.rotation()).rotate(jointDetail.varAxis()->getValue());
 				auto anchorOffset = jointDetail.varAnchorPoint()->getValue();
@@ -558,7 +631,7 @@ namespace dyno
 					printf("JointInfo : Error RigidId  [%d], [%d]\n", first, second);
 					continue;
 				}
-				if (Actors[first] == NULL || Actors[second] == NULL) 
+				if (Actors[first] == NULL || Actors[second] == NULL)
 				{
 					printf("JointInfo : Actor is NULL [%d], [%d]\n", first, second);
 					continue;
@@ -589,18 +662,64 @@ namespace dyno
 				if (type == JOINT_Fixed)
 				{
 					auto& fixedJoint1 = this->createFixedJoint(Actors[first], Actors[second]);
-					fixedJoint1.setAnchorPoint((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset);
+					fixedJoint1.setAnchorPoint(relative ? ((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset) : anchorOffset + instance.translation());
 				}
 				if (type == JOINT_Point)
 				{
 					auto& pointJoint = this->createPointJoint(Actors[first]);
-					pointJoint.setAnchorPoint(Actors[first]->center + anchorOffset);
+					pointJoint.setAnchorPoint(relative ? (Actors[first]->center + anchorOffset) : anchorOffset + instance.translation());
 				}
 				if (type == JOINT_BallAndSocket)
 				{
 					auto& ballAndSocketJoint = this->createBallAndSocketJoint(Actors[first], Actors[second]);
-					ballAndSocketJoint.setAnchorPoint((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset);
+					ballAndSocketJoint.setAnchorPoint(relative ? ((Actors[first]->center + Actors[first]->center) / 2 + anchorOffset) : anchorOffset + instance.translation());
 				}
+			}
+		}
+		
+	}
+	template<typename TDataType>
+	void ConfigurableBody<TDataType>::onTexMeshLoad()
+	{
+		auto&& config = this->varConfiguration()->getValue();
+
+		auto rigidInfo = config.varRigidBodyConfigs();
+		auto assetInfo = config.varAssetConfigs();
+		auto jointInfo = config.varJointConfigs();
+
+		std::vector<FilePath> texMeshFiles;
+		std::vector<std::string> assetNames;
+		std::vector<FilePath> maFiles;
+
+		for (auto it = assetInfo->begin(); it != assetInfo->end(); it++)
+		{
+			auto asset = assetInfo->getElement(it);
+			if (asset.isValid()) 
+			{
+				texMeshFiles.push_back(asset.varTexMeshPath()->getValue());
+				maFiles.push_back(asset.varMaPath()->getValue());
+				assetNames.push_back(asset.varAssetName()->getValue());
+			}
+		}
+
+		if (texMeshFiles.size())
+		{
+			loadTextureMeshFromFiles(
+				this->stateTextureMesh()->getDataPtr(),
+				texMeshFiles,
+				assetNames,
+				mBaryCenter,
+				mVolume,
+				mInertialMatrix,
+				mName2texMeshID,
+				true
+			);
+		}
+		if (maFiles.size()) 
+		{
+			for (size_t i = 0; i < maFiles.size(); i++)
+			{
+				loadMa(assetNames[i], maFiles[i].string());
 			}
 		}
 
@@ -618,6 +737,155 @@ namespace dyno
 		RigidBodySystem<TDataType>::postUpdateStates();
 
 		this->updateInstanceTransform();
+	}
+
+
+	template<typename TDataType>
+	bool ConfigurableBody<TDataType>::loadMa(std::string name, std::string file_path)
+	{
+		std::vector<Vec4f> vertices;
+		std::vector<Vec2i> edges;
+		std::vector<Vec3i>	faces;
+		std::string filename = file_path;
+		
+		bool is_absolute = false;
+		if (!file_path.empty())
+		{
+			if (file_path.size() >= 3 && std::isalpha(file_path[0]) && file_path[1] == ':')
+			{
+				char sep = file_path[2];
+				if (sep == '\\' || sep == '/')
+				{
+					is_absolute = true;
+				}
+			}
+			else if (file_path.size() >= 2 && file_path[0] == '\\' && file_path[1] == '\\')
+			{
+				is_absolute = true;
+			}
+		}
+
+		if (is_absolute)
+		{
+			filename = file_path;
+		}
+		else
+		{
+			std::string asset_root = getAssetPath();
+			if (!asset_root.empty())
+			{
+				char last = asset_root.back();
+				if (last != '\\' && last != '/')
+				{
+					asset_root += "\\";
+				}
+			}
+			filename = asset_root + file_path;
+		}
+		
+		std::ifstream inputFile(filename);
+		std::string line;
+		int num_vertices = 0, num_edges = 0, num_faces = 0;
+
+		if (!inputFile.is_open())
+		{
+			std::cerr << "ERROR MA FILE: cannot open " << filename << std::endl;
+			return false;
+		}
+
+		if (std::getline(inputFile, line))
+		{
+			std::istringstream iss(line);
+			if (!(iss >> num_vertices >> num_edges >> num_faces)) {
+				std::cerr << "ERROR MA FILE: invalid header in " << filename << std::endl;
+				inputFile.close();
+				return false;
+			}
+			std::cout << "num Of vertices : " << num_vertices
+				<< ", num Of edges : " << num_edges
+				<< ", num Of faces : " << num_faces << std::endl;
+		}
+		else
+		{
+			std::cerr << "ERROR MA FILE: empty file " << filename << std::endl;
+			inputFile.close();
+			return false;
+		}
+
+		int current_vertex_count = 0;
+		int current_edge_count = 0;
+		int current_face_count = 0;
+
+		while (std::getline(inputFile, line))
+		{
+			if (line.empty() || line[0] == '#')
+			{
+				continue;
+			}
+
+			std::istringstream iss(line);
+			char type;
+			iss >> type;
+
+			if (type == 'v' && current_vertex_count < num_vertices)
+			{
+				Vec4f vertex;
+				if (iss >> vertex[0] >> vertex[1] >> vertex[2] >> vertex[3])
+				{
+					vertex = vertex;
+					vertices.push_back(vertex);
+					current_vertex_count++;
+				}
+				else {
+					std::cerr << "ERROR load vertex" << std::endl;
+				}
+			}
+			else if (type == 'e' && current_edge_count < num_edges)
+			{
+				Vec2i edge;
+				if (iss >> edge[0] >> edge[1])
+				{
+					if (edge[0] >= 0 && edge[0] < num_vertices && edge[1] >= 0 && edge[1] < num_vertices)
+					{
+						edges.push_back(edge);
+						current_edge_count++;
+					}
+					else {
+						std::cerr << "ERROR load edge" << std::endl;
+					}
+				}
+				else {
+					std::cerr << "ERROR load edge" << std::endl;
+				}
+			}
+			else if (type == 'f' && current_face_count < num_faces)
+			{
+				Vec3i face;
+				if (iss >> face[0] >> face[1] >> face[2])
+				{
+					if (face[0] >= 0 && face[0] < num_vertices && face[1] >= 0 && face[1] < num_vertices && face[2] >= 0 && face[2] < num_vertices)
+					{
+						faces.push_back(face);
+						current_face_count++;
+					}
+					else {
+						std::cerr << "ERROR load face" << std::endl;
+					}
+				}
+				else {
+					std::cerr << "ERROR load face" << std::endl;
+				}
+			}
+		}
+		inputFile.close();
+
+		this->Vertices[name] = std::move(vertices);
+		this->Edges[name] = std::move(edges);
+		this->Faces[name] = std::move(faces);
+
+		return num_vertices == current_vertex_count
+			&& num_edges == current_edge_count
+			&& num_faces == current_face_count;
 	}
 
 	DEFINE_CLASS(ConfigurableBody);

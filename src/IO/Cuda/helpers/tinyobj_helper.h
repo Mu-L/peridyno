@@ -79,6 +79,17 @@ namespace dyno
 	bool loadTextureMeshFromXml(std::shared_ptr<TextureMesh> texMesh, const std::string& xmlPath, 
 		std::vector<SceneObject>& sceneObjects, std::vector<Asset>& assets, std::vector<SceneJoint>& sceneJoints, bool doTransform = true);
 
+	bool loadTextureMeshFromFiles(
+		std::shared_ptr<TextureMesh> texMesh,
+		const std::vector<FilePath>& files,
+		const std::vector<std::string>& assetNames,
+		std::map<std::string, Vec3f>& baryCenter,
+		std::map<std::string, Real>& volume,
+		std::map<std::string, Mat3f>& inertialMatrix,
+		std::map<std::string, std::vector<uint>>& name2texMeshShape,
+		bool doTransform = true
+	);
+
 	bool loadTextureMeshFromObj(std::shared_ptr<TextureMesh> texMesh, const FilePath& fullname,bool useToCenter = true);
 
 	bool loadObj(std::vector<Vec3f>& points, std::vector<Topology::Triangle>& triangles, std::string filename, bool append = false);
