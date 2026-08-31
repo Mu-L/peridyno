@@ -14,7 +14,6 @@
 #include "RigidBody/MultibodySystem.h"
 #include <HeightField/SurfaceParticleTracking.h>
 #include <HeightField/RigidSandCoupling.h>
-#include "Mapping/DiscreteElementsJointToEdgeSet.h"
 #include "GLWireframeVisualModule.h"
 
 using namespace std;
@@ -104,17 +103,6 @@ std::shared_ptr<SceneGraph> creatCar()
 	plane->varSegmentZ()->setValue(5);
 	plane->stateTriangleSet()->connect(multibody->inTriangleSet());
 
-	auto visualJoint = std::make_shared<DiscreteElementsJointToEdgeSet<DataType3f>>();
-	robot->graphicsPipeline()->pushModule(visualJoint);
-	robot->stateTopology()->connect(visualJoint->inDiscreteElements());
-	visualJoint->varLength()->setValue(0.3f);
-
-	auto jointRender = std::make_shared<GLWireframeVisualModule>();
-	robot->graphicsPipeline()->pushModule(jointRender);
-	visualJoint->outEdgeSet()->connect(jointRender->inEdgeSet());
-	jointRender->varRenderMode()->setCurrentKey(1);
-	jointRender->varRadius()->setValue(0.03);
-	jointRender->varBaseColor()->setValue(Color::Red());
 
 	//float spacing = 0.1f;
 	//uint res = 256;
