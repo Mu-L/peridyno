@@ -27,7 +27,7 @@ std::shared_ptr<SceneGraph> createSceneGraph()
 	//scene->connect(convoy->importVehicles());
 
 	auto config = scn->addNode(std::make_shared<ConfigurableBody<DataType3f>>());
-	config->varLoadConfigPath()->setValue(FilePath(getAssetPath() + "ma/scene_20_crabs.pdm"));
+	config->varLoadConfigPath()->setValue(FilePath(getAssetPath() + "ma/scene_chain_pyramid_impact_box_mass_x5.pdm"));
 	config->varFrictionCoefficient()->setValue(0.35f);
 
 	config->connect(convoy->importVehicles());

@@ -22,6 +22,7 @@ namespace dyno
 
 		static std::atomic<RigidBodyGUIInitializer*> gInstance;
 		static std::mutex gMutex;
+
 	};
 }
 

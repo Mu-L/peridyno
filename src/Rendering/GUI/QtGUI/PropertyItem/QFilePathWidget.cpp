@@ -164,6 +164,22 @@ namespace dyno
 
 		saveButton = new QPushButton("Save");
 		saveButton->setFixedSize(60, 24);
+		saveButton->setStyleSheet(R"(
+			LockerButton {
+				background-color: #464646;
+				border: 1px solid #000000;
+				border-radius: 4px;
+				padding: 4px 8px;
+				text-align: left;
+				color: white;
+			}
+			LockerButton:hover {
+				background-color: #616161;
+			}
+			LockerButton:pressed {
+				background-color: #000000;
+			}
+		)");
 
 		layout->addWidget(name, 0);
 		layout->addStretch();
@@ -173,42 +189,18 @@ namespace dyno
 
 		connect(saveButton, &QPushButton::clicked, this, [=]() {
 
-			if (1)
-			{
+			QString qpath = QFileDialog::getSaveFileName(this, tr("Save As ..."), "", tr(f->getValue().getFileFilter().c_str()));//"Peridyno Multibody Files (*.pdm)"
+			if (!qpath.isEmpty()) {
+				//Windows: "\\"; Linux: "/"
+				qpath = QDir::toNativeSeparators(qpath);
+				path = qpath.toStdString();
 
-				QString qpath = QFileDialog::getSaveFileName(this, tr("Save As ..."), "", tr(f->getValue().getFileFilter().c_str()));//"Peridyno Multibody Files (*.pdm)"
-				if (!qpath.isEmpty()) {
-					//Windows: "\\"; Linux: "/"
-					qpath = QDir::toNativeSeparators(qpath);
-					path = qpath.toStdString();
-
-					updateField();
-				}
-				else
-					QMessageBox::warning(this, tr("Path"), tr("You do not select any path."));
-
-
+				updateField();
 			}
-			//else
-			//{
-			//	QString qpath = QFileDialog::getOpenFileName(this, tr("Save As ..."), QString::fromStdString(getAssetPath()), tr("Peridyno Multibody Files (*.pdm)"));
-			//	if (!qpath.isEmpty()) {
-			//		//Windows: "\\"; Linux: "/"
-			//		qpath = QDir::toNativeSeparators(qpath);
-			//		QFile file(qpath);
-			//		if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-			//			QMessageBox::warning(this, tr("Read File"),
-			//				tr("Cannot open file:\n%1").arg(qpath));
-			//			return;
-			//		}
-			//		path = qpath.toStdString();
-			//		file.close();
-			//	}
-			//	else {
-			//		QMessageBox::warning(this, tr("Path"), tr("You do not select any file."));
-			//	}
-			//}
-			});
+			else
+				QMessageBox::warning(this, tr("Path"), tr("You do not select any path."));
+
+		});
 	}
 
 	void QSaveFilePathWidget::updateField()

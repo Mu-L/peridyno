@@ -75,6 +75,7 @@ namespace dyno
 
 	public:
 		void clearCallBackFunc();
+		void clearField() { mField = nullptr; };
 
 	signals:
 		void fieldChanged();

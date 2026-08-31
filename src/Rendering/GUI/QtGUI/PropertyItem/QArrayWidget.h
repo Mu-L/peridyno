@@ -78,8 +78,8 @@ namespace dyno
         {
             if (listLayout)
                 clearLayoutRecursively(listLayout);
-            updateSizeLabel();
             mList->clear();
+            updateSizeLabel();
         }
 
         void addElement()

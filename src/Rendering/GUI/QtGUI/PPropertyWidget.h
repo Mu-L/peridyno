@@ -88,6 +88,8 @@ namespace dyno
 		static std::map<std::string, FieldWidgetMeta> tempGetMeta() { return sFieldWidgetMeta; };
 
 		QWidget* addVariableFieldWidget(FBase* field, QGridLayout* layout = nullptr);
+		LockerButton* getLockerButton(uint i);
+		QWidget* getPropertyWidget(uint i) { return mPropertyWidget[i]; };
 
 	private:
 		static std::map<std::string, FieldWidgetMeta> sFieldWidgetMeta;

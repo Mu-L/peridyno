@@ -42,9 +42,14 @@ namespace dyno
 	class ShapeTuple : public Tuple
 	{
 	public:
-		ShapeTuple() {};
+		ShapeTuple() 
+		{
+			updateRange();
+		};
+
 		ShapeTuple(ShapeTuple& other)
 		{
+			updateRange();
 			this->varShapeType()->setValue(other.varShapeType()->getValue());
 			this->varCenter()->setValue(other.varCenter()->getValue());
 			this->varRot()->setValue(other.varRot()->getValue());
@@ -56,6 +61,8 @@ namespace dyno
 			this->varMaAssetName()->setValue(other.varMaAssetName()->getValue());
 		}
 		ShapeTuple& operator=(ShapeTuple& other) {
+
+			updateRange();
 			this->varShapeType()->setValue(other.varShapeType()->getValue());
 			this->varCenter()->setValue(other.varCenter()->getValue());
 			this->varRot()->setValue(other.varRot()->getValue());
@@ -73,6 +80,7 @@ namespace dyno
 			const ShapeTuple* constPtr = &other;
 			ShapeTuple* nonConstPtr = const_cast<ShapeTuple*>(constPtr);
 
+			updateRange();
 			this->varShapeType()->setValue(nonConstPtr->varShapeType()->getValue());
 			this->varCenter()->setValue(nonConstPtr->varCenter()->getValue());
 			this->varRot()->setValue(nonConstPtr->varRot()->getValue());
@@ -95,6 +103,7 @@ namespace dyno
 			std::list<Vec3f> tet = std::list<Vec3f>()
 		)
 		{
+			updateRange();
 			this->varShapeType()->setCurrentKey(shapeType);
 			this->varCenter()->setValue(center);
 			this->varRot()->setValue(rot);
@@ -104,17 +113,19 @@ namespace dyno
 			this->varCapsuleLength()->setValue(capsuleLength);
 			this->varTet()->assign(tet);
 		};
+		
+		void updateRange();
 
 		//Shape:
 		DEF_ENUM(RigidShapeType, ShapeType, RigidShapeType::SHAPE_BOX, "");
 		DEF_VAR(Vec3f, Center, Vec3f(0.0f, 0.0f, 0.0f), "");
 		DEF_VAR(Quat<Real>, Rot, Quat<Real>(), "");
-		DEF_VAR(Real, Density, 0.0f, "");
+		DEF_VAR(Real, Density, 100.0f, "");
 		DEF_VAR(Vec3f, HalfLength, Vec3f(0.0f, 0.0f, 0.0f), "");	// if(type == Box);	
-		DEF_VAR(Real, Radius, 0.0f, "");							//	if(type == Sphere);  if(type == Capsule);
+		DEF_VAR(Real, Radius, 0.0f, "");							// if(type == Sphere);  if(type == Capsule);
 		DEF_VAR(Real, CapsuleLength, 0.0f, "");						// if(type == Capsule);
 		DEF_LIST(Vec3f, Tet, "");	
-		DEF_VAR(std::string, MaAssetName,"","");
+		DEF_VAR(std::string, MaAssetName,"","Qtstyle(Group=MaAsset)");
 	};
 
 	DECLARE_ENUM(RigidMotionType,
@@ -189,18 +200,21 @@ namespace dyno
 	class RigidBodyTuple : public Tuple
 	{
 	public:
-		RigidBodyTuple() {
+		RigidBodyTuple() 
+		{
+			updateRange();
 		};
+
 		RigidBodyTuple(std::string shapeName, int rigidBodyId = -1)
 		{
+			updateRange();
 			this->varShapeName()->setValue(shapeName);
-			this->varRigidBodyId()->setValue(rigidBodyId);
 		}
 
 		RigidBodyTuple(std::string shapeName, int rigidBodyId,int visualShapeId, RigidShapeType type, Real density = 100)
 		{
+			updateRange();
 			this->varShapeName()->setValue(shapeName);
-			this->varRigidBodyId()->setValue(rigidBodyId);
 			this->varVisualShapeIds()->pushBack(visualShapeId);
 			ShapeTuple shape;
 			shape.varShapeType()->setCurrentKey(type);
@@ -212,8 +226,8 @@ namespace dyno
 			const RigidBodyTuple* constPtr = &other;
 			RigidBodyTuple* nonConstPtr = const_cast<RigidBodyTuple*>(constPtr);
 
+			updateRange();
 			this->varShapeName()->setValue(nonConstPtr->varShapeName()->getValue());
-			this->varRigidBodyId()->setValue(nonConstPtr->varRigidBodyId()->getValue());
 			this->varAngel()->setValue(nonConstPtr->varAngel()->getValue());
 			this->varLinearVelocity()->setValue(nonConstPtr->varLinearVelocity()->getValue());
 			this->varAngularVelocity()->setValue(nonConstPtr->varAngularVelocity()->getValue());
@@ -237,8 +251,8 @@ namespace dyno
 			const RigidBodyTuple* constPtr = &other;
 			RigidBodyTuple* nonConstPtr = const_cast<RigidBodyTuple*>(constPtr);
 
+			updateRange();
 			this->varShapeName()->setValue(nonConstPtr->varShapeName()->getValue());
-			this->varRigidBodyId()->setValue(nonConstPtr->varRigidBodyId()->getValue());
 			this->varAngel()->setValue(nonConstPtr->varAngel()->getValue());
 			this->varLinearVelocity()->setValue(nonConstPtr->varLinearVelocity()->getValue());
 			this->varAngularVelocity()->setValue(nonConstPtr->varAngularVelocity()->getValue());
@@ -277,8 +291,8 @@ namespace dyno
 			Vec3f scale = Vec3f(1.0f)
 		)
 		{
+			updateRange();
 			this->varShapeName()->setValue(name);
-			this->varRigidBodyId()->setValue(rigidbodyID);
 			this->varAngel()->setValue(angle);
 			this->varLinearVelocity()->setValue(linearVelocity);
 			this->varAngularVelocity()->setValue(angularVelocity);
@@ -296,24 +310,25 @@ namespace dyno
 			this->varScale()->setValue(scale);
 		}
 
-		DEF_VAR(std::string, ShapeName,"", "");
-		DEF_VAR(int, RigidBodyId,-1, "");
+		void updateRange();
 
-		DEF_VAR(Quat<Real>,Angel, Quat<Real>(0.0f, 0.0f, 0.0f, 1.0f),"");
-		DEF_VAR(Vec3f, LinearVelocity, Vec3f(0.0f),"");
-		DEF_VAR(Vec3f, AngularVelocity, Vec3f(0.0f),"");
-		DEF_VAR(Vec3f, Position, Vec3f(std::nanf("")),"");
-		DEF_VAR(Vec3f, Scale, Vec3f(1.0f), "");
-		DEF_VAR(Vec3f, Offset, Vec3f(0.0f),"");
-		DEF_VAR(Mat3f, Inertia, Mat3f(0.0f),"QtStyle(Advance)");
-		DEF_VAR(Real, Friction, -1.0f,"QtStyle(Advance)");
-		DEF_VAR(Real, Restitution, 0.0f,"QtStyle(Advance)");
+		DEF_VAR(std::string, ShapeName,"", "");
+
+		DEF_VAR(Quat<Real>,Angel, Quat<Real>(0.0f, 0.0f, 0.0f, 1.0f),"Qtstyle(Group=Transform)");
+		DEF_VAR(Vec3f, LinearVelocity, Vec3f(0.0f),"Qtstyle(Group=RigidBodyAttribute)");
+		DEF_VAR(Vec3f, AngularVelocity, Vec3f(0.0f),"Qtstyle(Group=RigidBodyAttribute)");
+		DEF_VAR(Vec3f, Position, Vec3f(0.0f),"Qtstyle(Group=Transform)");
+		DEF_VAR(Vec3f, Scale, Vec3f(1.0f), "Qtstyle(Group=Transform)");
+		DEF_VAR(Vec3f, Offset, Vec3f(0.0f),"Qtstyle(Group=Transform)");
+		DEF_VAR(Mat3f, Inertia, Mat3f(0.0f),"Qtstyle(Group=RigidBodyAttribute)");
+		DEF_VAR(Real, Friction, -1.0f,"Qtstyle(Group=RigidBodyAttribute)");
+		DEF_VAR(Real, Restitution, 0.0f,"Qtstyle(Group=RigidBodyAttribute)");
 		
-		DEF_ENUM(RigidMotionType, MotionType, RigidMotionType::RIGID_Dynamic, "RigidMotionType;QtStyle(Advance)");
+		DEF_ENUM(RigidMotionType, MotionType, RigidMotionType::RIGID_Dynamic, "Qtstyle(Group=RigidBodyAttribute)");
 
 		DEF_ENUM(RigidShapeType, ShapeType, RigidShapeType::SHAPE_Other, "RigidMotionType");
 		
-		DEF_ENUM(RigidCollisionMask, CollisionMask, RigidCollisionMask::RIGID_AllObjects, "RigidMotionType;QtStyle(Advance)");
+		DEF_ENUM(RigidCollisionMask, CollisionMask, RigidCollisionMask::RIGID_AllObjects, "Qtstyle(Group=RigidBodyAttribute)");
 
 		DEF_VAR(int, ConfigGroup, 0, "QtStyle(Advance)");
 		DEF_LIST(int, VisualShapeIds, "");
@@ -340,9 +355,7 @@ namespace dyno
 		MultiBodyJointTuple() {};
 		MultiBodyJointTuple& operator=(MultiBodyJointTuple& other) {
 			this->varAShapeName()->setValue(other.varAShapeName()->getValue());
-			this->varARigidBodyId()->setValue(other.varARigidBodyId()->getValue());
 			this->varBShapeName()->setValue(other.varBShapeName()->getValue());
-			this->varBRigidBodyId()->setValue(other.varBRigidBodyId()->getValue());
 			this->varAnchorPoint()->setValue(other.varAnchorPoint()->getValue());
 			this->varRelativeAnchorPoint()->setValue(other.varRelativeAnchorPoint()->getValue());
 			this->varUseMoter()->setValue(other.varUseMoter()->getValue());
@@ -357,12 +370,10 @@ namespace dyno
 
 			return *this;
 		}
-		MultiBodyJointTuple(std::string AName, int ARigidId, std::string BName, int BRigidId, JointType type, Vec3f Axi = Vec3f(1, 0, 0), Vec3f Point = Vec3f(0), bool Moter = false, Real moter = 0, bool Range = false, Real min = 0, Real max = 0, bool relative = true)
+		MultiBodyJointTuple(std::string AName, std::string BName, JointType type, Vec3f Axi = Vec3f(1, 0, 0), Vec3f Point = Vec3f(0), bool Moter = false, Real moter = 0, bool Range = false, Real min = 0, Real max = 0, bool relative = true)
 		{
 			this->varAShapeName()->setValue(AName);
-			this->varARigidBodyId()->setValue(ARigidId);
 			this->varBShapeName()->setValue(BName);
-			this->varBRigidBodyId()->setValue(BRigidId);
 			this->varMoter()->setValue(Moter);
 			this->varUseMoter()->setValue(Moter!=0);
 			this->varUseRange()->setValue(Range);
@@ -380,9 +391,7 @@ namespace dyno
 			MultiBodyJointTuple* nonConstPtr = const_cast<MultiBodyJointTuple*>(constPtr);
 
 			this->varAShapeName()->setValue(nonConstPtr->varAShapeName()->getValue());
-			this->varARigidBodyId()->setValue(nonConstPtr->varARigidBodyId()->getValue());
 			this->varBShapeName()->setValue(nonConstPtr->varBShapeName()->getValue());
-			this->varBRigidBodyId()->setValue(nonConstPtr->varBRigidBodyId()->getValue());
 			this->varAnchorPoint()->setValue(nonConstPtr->varAnchorPoint()->getValue());
 			this->varRelativeAnchorPoint()->setValue(nonConstPtr->varRelativeAnchorPoint()->getValue());
 			this->varUseMoter()->setValue(nonConstPtr->varUseMoter()->getValue());
@@ -399,9 +408,7 @@ namespace dyno
 		
 		MultiBodyJointTuple(
 		std::string aShapeName,
-		int aRigidBodyId,
 		std::string bShapeName,
-		int bRigidBodyId,
 		Vec3f anchorPoint,
 		bool relativeAnchorPoint,
 		bool useMoter,
@@ -417,9 +424,7 @@ namespace dyno
 		)
 		{
 			this->varAShapeName()->setValue(aShapeName);
-			this->varARigidBodyId()->setValue(aRigidBodyId);
 			this->varBShapeName()->setValue(bShapeName);
-			this->varBRigidBodyId()->setValue(bRigidBodyId);
 			this->varAnchorPoint()->setValue(anchorPoint);
 			this->varRelativeAnchorPoint()->setValue(relativeAnchorPoint);
 			this->varUseMoter()->setValue(useMoter);
@@ -435,26 +440,24 @@ namespace dyno
 		}
 
 		DEF_VAR(std::string, AShapeName, "", "");
-		DEF_VAR(int, ARigidBodyId, -1, "");
 		DEF_VAR(std::string, BShapeName, "", "");
-		DEF_VAR(int, BRigidBodyId, -1, "");
 		DEF_VAR(Vec3f, AnchorPoint, Vec3f(0), "");
 		DEF_VAR(bool, RelativeAnchorPoint, true, "");
 		//SliderJoint  HingeJoint
-		DEF_VAR(bool, UseMoter, false, "");
-		DEF_VAR(bool, UseRange, false, "");
+		DEF_VAR(bool, UseMoter, false, "Qtstyle(Group=HingeJoint)");
+		DEF_VAR(bool, UseRange, false, "Qtstyle(Group=HingeJoint)");
 		//SliderJoint  HingeJoint
-		DEF_VAR(Vec2f, Range, Vec2f(0.0f), "");
-		DEF_VAR(Real, Moter, 0.0f, "");
+		DEF_VAR(Vec2f, Range, Vec2f(0.0f), "Qtstyle(Group=HingeJoint)");
+		DEF_VAR(Real, Moter, 0.0f, "Qtstyle(Group=HingeJoint)");
 		//HingeJoint  SliderJoint 
-		DEF_VAR(Vec3f, Axis, Vec3f(0.0f), "");
+		DEF_VAR(Vec3f, Axis, Vec3f(1.0f,0.0f,0.0f), "");
 		//FixedJoint
-		DEF_VAR(Quat<Real>, Q, Quat<Real>(), "");
+		DEF_VAR(Quat<Real>, Q, Quat<Real>(), "Qtstyle(Group=FixedJoint)");
 		//distanceJoint  BallAndSocketJoint
-		DEF_VAR(Vec3f, R1, Vec3f(0.0f), "");
-		DEF_VAR(Vec3f, R2, Vec3f(0.0f), "");
+		DEF_VAR(Vec3f, R1, Vec3f(0.0f), "Qtstyle(Group=DistanceJointBallJoint)");
+		DEF_VAR(Vec3f, R2, Vec3f(0.0f), "Qtstyle(Group=DistanceJointBallJoint)");
 		//distanceJoint
-		DEF_VAR(Real, Distance, 0.0f, "");
+		DEF_VAR(Real, Distance, 0.0f, "Qtstyle(Group=DistanceJoint)");
 		DEF_ENUM(JointType, JointType, JointType::JOINT_Hinge, "RigidMotionType");
 
 	};

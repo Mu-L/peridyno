@@ -17,6 +17,7 @@
 #include <QScrollArea>
 #include <QGridLayout>
 #include <QRadioButton>
+#include <QToolButton>
 
 #include "PropertyItem/QStateFieldWidget.h"
 #include "PropertyItem/QArrayWidget.h"
@@ -273,7 +274,7 @@ namespace dyno
 					mPropertyWidget[i]->setVisible(true);
 				}
 				mFlag[i] = !mFlag[i];
-				});
+			});
 		}
 		vlayout->setContentsMargins(0, 0, 0, 0);
 		vlayout->setSpacing(0);
@@ -283,6 +284,11 @@ namespace dyno
 
 		mSeleted = node;
 	}
+
+	LockerButton* PPropertyWidget::getLockerButton(uint i) 
+	{ 
+		return mPropertyLabel[i]; 
+	};
 
 	void PPropertyWidget::showProperty(Qt::QtNode& block)
 	{
@@ -354,6 +360,8 @@ namespace dyno
 	QWidget* PPropertyWidget::addScalarFieldWidget(FBase* field, QGridLayout* layout)
 	{
 		if (field->getClassName() != std::string("FVar")) return nullptr;
+		if (field->isEmpty())
+			return NULL;
 
 		QWidget* fw = createFieldWidget(field);
 		
@@ -385,19 +393,146 @@ namespace dyno
 			}
 		}
 
-		QGroupBox* groupBox = new QGroupBox(name);
+		QGroupBox* groupBox = new QGroupBox;
 		groupBox->setStyleSheet(R"(
-					QGroupBox {
-						margin-top: 12px;
-						border: 2px solid #454545;
-					}
-					QGroupBox::title {
-						subcontrol-origin: margin;
-						subcontrol-position:top center;
-					}
-				)");
+			QGroupBox {
+				margin-top: 12px;
+				border: 2px solid #454545;
+			}
+			QGroupBox::title {
+				subcontrol-origin: margin;
+				subcontrol-position: top center;
+			}
+		)");
 
-		QGridLayout* vbox = new QGridLayout;
+		QVBoxLayout* mainLayout = new QVBoxLayout;
+
+		LockerButton* toggleButton = new LockerButton;
+		toggleButton->SetImageLabel(QPixmap((getAssetPath() + "/icon/arrow_right_pressed.png").c_str()));
+		toggleButton->SetTextLabel(QString("[ ") + FormatFieldWidgetName(tuple->getObjectName()) + QString(" Fields") + QString("]"));
+		setContentsMargins(8, 0, 0, 0);
+		toggleButton->setCheckable(true);
+		toggleButton->setChecked(false);
+		toggleButton->setStyleSheet(R"(
+			LockerButton {
+				background-color: #464646;
+				border: 1px solid #000000;
+				border-radius: 4px;
+				padding: 4px 8px;
+				text-align: left;
+				color: white;
+			}
+			LockerButton:hover {
+				background-color: #616161;
+			}
+			LockerButton:pressed {
+				background-color: #000000;
+			}
+		)");
+
+		QWidget* contentWidget = new QWidget;
+		contentWidget->setVisible(false);
+		contentWidget->setStyleSheet("background-color: transparent;");
+
+		QVBoxLayout* contentLayout = new QVBoxLayout(contentWidget);
+		contentLayout->setContentsMargins(0, 4, 0, 0);
+		contentLayout->setSpacing(4);
+
+		struct GroupInfo {
+			std::string name;
+			QGroupBox* groupBox;
+			LockerButton* button;
+			QWidget* content;
+			QGridLayout* layout;
+			QBoxLayout* currentLayout;
+			enum LastLayoutMode { None, VBox, HBox };
+			LastLayoutMode lastMode;
+			int row;
+			int tempRow;
+		};
+
+		std::vector<GroupInfo> groups;
+		std::string dummy;
+
+		auto findOrCreateGroup = [&](const std::string& groupName) -> GroupInfo* {
+			if (groupName.empty()) {
+				return nullptr;
+			}
+			for (auto& g : groups) {
+				if (g.name == groupName) {
+					return &g;
+				}
+			}
+			groups.push_back({});
+			GroupInfo* g = &groups.back();
+			g->name = groupName;
+			g->lastMode = GroupInfo::None;
+			g->row = -1;
+			g->tempRow = -1;
+
+			g->groupBox = new QGroupBox;
+			g->groupBox->setStyleSheet(R"(
+				QGroupBox {
+					margin-top: 10px;
+					border: 1px solid #454545;
+					border-radius: 4px;
+				}
+				QGroupBox::title {
+					subcontrol-origin: margin;
+					subcontrol-position: top center;
+				}
+			)");
+
+			QVBoxLayout* vbl = new QVBoxLayout(g->groupBox);
+			vbl->setContentsMargins(4, 4, 4, 4);
+
+			g->button = new LockerButton;
+			g->button->SetImageLabel(QPixmap((getAssetPath() + "/icon/arrow_right_pressed.png").c_str()));
+			g->button->SetTextLabel(QString::fromStdString(groupName));
+			g->button->setCheckable(true);
+			g->button->setChecked(false);
+			g->button->setStyleSheet(R"(
+				LockerButton {
+					background-color: #464646;
+					border: 1px solid #000000;
+					border-radius: 4px;
+					padding: 3px 8px;
+					text-align: left;
+					color: white;
+				}
+				LockerButton:hover {
+					background-color: #616161;
+				}
+				LockerButton:pressed {
+					background-color: #000000;
+				}
+			)");
+
+			g->content = new QWidget;
+			g->content->setVisible(false);
+			g->content->setStyleSheet("background-color: transparent;");
+
+			g->layout = new QGridLayout(g->content);
+			g->layout->setContentsMargins(8, 2, 2, 2);
+
+			vbl->addWidget(g->button);
+			vbl->addWidget(g->content);
+
+			LockerButton* btn = g->button;
+			QWidget* cw = g->content;
+			connect(btn, &LockerButton::clicked, [btn, cw]() {
+				if (cw->isVisible()) {
+					btn->SetImageLabel(QPixmap((getAssetPath() + "/icon/arrow_right_pressed.png").c_str()));
+					cw->setVisible(false);
+				} else {
+					btn->SetImageLabel(QPixmap((getAssetPath() + "/icon/arrow_down_pressed.png").c_str()));
+					cw->setVisible(true);
+				}
+			});
+
+			contentLayout->addWidget(g->groupBox);
+			return g;
+		};
 
 		QBoxLayout* currentLayout = NULL;
 		enum LastLayoutMode
@@ -410,7 +545,10 @@ namespace dyno
 		LastLayoutMode lastMode = None;
 		int row = -1;
 		int temp = -1;
-		std::string dummy;
+
+		QGridLayout* vbox = new QGridLayout;
+		bool hasUngrouped = false;
+
 		for (size_t i = 0; i < tuple->size(); i++)
 		{
 			auto field = tuple->get(i);
@@ -419,10 +557,47 @@ namespace dyno
 			bool onlyDetail = false;
 
 			DescriptionHelper::parseQtStyleDescriptionRobust(field->getDescription(), dummy, selfVLayout, onlyDetail);
+			std::string groupName = DescriptionHelper::parseQtStyleGroup(field->getDescription());
 
 			if (i < tuple->size() - 1)
 				DescriptionHelper::parseQtStyleDescriptionRobust(tuple->get(i + 1)->getDescription(), dummy, nextVLayout, onlyDetail);
 
+			QWidget* fw = this->addVariableFieldWidget(field, NULL);
+			if (!fw)
+				continue;
+
+			if (!groupName.empty()) {
+				GroupInfo* g = findOrCreateGroup(groupName);
+				if (g) {
+					switch (g->lastMode)
+					{
+					case GroupInfo::None:
+						if (!nextVLayout) { g->currentLayout = new QHBoxLayout; g->lastMode = GroupInfo::HBox; }
+						else { g->currentLayout = new QVBoxLayout; g->lastMode = GroupInfo::VBox; }
+						g->row++;
+						break;
+					case GroupInfo::VBox:
+						if (!nextVLayout) { g->currentLayout = new QHBoxLayout; g->row++; g->lastMode = GroupInfo::HBox; }
+						break;
+					case GroupInfo::HBox:
+						if (selfVLayout) {
+							if (!nextVLayout) { g->currentLayout = new QHBoxLayout; g->lastMode = GroupInfo::HBox; }
+							else { g->currentLayout = new QVBoxLayout; g->lastMode = GroupInfo::VBox; }
+							g->row++;
+						}
+						break;
+					default:
+						break;
+					}
+					g->currentLayout->addWidget(fw);
+					if (g->tempRow != g->row)
+						g->layout->addLayout(g->currentLayout, g->row, 0);
+					g->tempRow = g->row;
+					continue;
+				}
+			}
+
+			hasUngrouped = true;
 			switch (lastMode)
 			{
 			case None:
@@ -466,25 +641,34 @@ namespace dyno
 				break;
 			}
 
-			QWidget* fw = this->addVariableFieldWidget(field, NULL);
-
 			currentLayout->addWidget(fw);
 
 			if (temp != row)
 				vbox->addLayout(currentLayout,row,0);
 			temp = row;
-
-			if (fw != nullptr) {
-				fw->setStyleSheet(R"(
-					QGroupBox {
-					margin-top: 4px;
-					border: 1px solid #454545;
-				}
-				)");
-			}
 		}
 
-		groupBox->setLayout(vbox);
+		if (hasUngrouped) {
+			contentLayout->insertLayout(0, vbox);
+		}
+
+		mainLayout->addWidget(toggleButton);
+		mainLayout->addWidget(contentWidget);
+		groupBox->setLayout(mainLayout);
+
+		connect(toggleButton, &LockerButton::clicked, [toggleButton, contentWidget]() {
+			bool visible = contentWidget->isVisible();
+			if (visible)
+			{
+				toggleButton->SetImageLabel(QPixmap((getAssetPath() + "/icon/arrow_right_pressed.png").c_str()));
+				contentWidget->setVisible(false);
+			}
+			else
+			{
+				toggleButton->SetImageLabel(QPixmap((getAssetPath() + "/icon/arrow_down_pressed.png").c_str()));
+				contentWidget->setVisible(true);
+			}
+		});
 
 		if(layout != nullptr) layout->addWidget(groupBox);
 

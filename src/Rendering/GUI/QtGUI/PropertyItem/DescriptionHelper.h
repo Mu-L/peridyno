@@ -118,4 +118,82 @@ namespace DescriptionHelper
         return foundAny;
     }
 
+    std::string parseQtStyleGroup(const std::string& input) {
+        size_t pos = 0;
+        while (pos < input.length()) {
+            size_t found = input.find_first_of("Qq", pos);
+            if (found == std::string::npos) break;
+            
+            const std::string marker = "QtStyle";
+            if (input.length() - found < marker.length()) {
+                pos = found + 1;
+                continue;
+            }
+            
+            bool match = true;
+            for (size_t i = 0; i < marker.length(); i++) {
+                if (std::tolower(input[found + i]) != std::tolower(marker[i])) {
+                    match = false;
+                    break;
+                }
+            }
+            if (!match) {
+                pos = found + 1;
+                continue;
+            }
+            
+            size_t after = found + marker.length();
+            while (after < input.length() && std::isspace(input[after])) ++after;
+            if (after >= input.length() || input[after] != '(') {
+                pos = found + 1;
+                continue;
+            }
+            
+            size_t openParen = after;
+            int depth = 1;
+            size_t closeParen = openParen + 1;
+            while (closeParen < input.length() && depth > 0) {
+                if (input[closeParen] == '(') depth++;
+                else if (input[closeParen] == ')') depth--;
+                if (depth == 0) break;
+                ++closeParen;
+            }
+            if (depth != 0) {
+                pos = found + 1;
+                continue;
+            }
+            
+            std::string params = input.substr(openParen + 1, closeParen - openParen - 1);
+            std::vector<std::string> tokens;
+            std::stringstream ss(params);
+            std::string token;
+            while (std::getline(ss, token, ',')) {
+                std::string trimmed = trim(token);
+                if (!trimmed.empty()) tokens.push_back(trimmed);
+            }
+            
+            std::string firstPosArg;
+            for (const auto& t : tokens) {
+                size_t eqPos = t.find('=');
+                if (eqPos != std::string::npos) {
+                    std::string key = trim(t.substr(0, eqPos));
+                    std::string value = trim(t.substr(eqPos + 1));
+                    if (iequals(key, "Group") && !value.empty()) {
+                        return value;
+                    }
+                } else {
+                    if (firstPosArg.empty())
+                        firstPosArg = t;
+                }
+            }
+            
+            if (!firstPosArg.empty())
+                return firstPosArg;
+            
+            pos = closeParen + 1;
+        }
+        
+        return "";
+    }
+
 }

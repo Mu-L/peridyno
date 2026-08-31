@@ -163,10 +163,15 @@ namespace dyno
                 }
             )");
 
-		connect(deleteButton, &QPushButton::clicked, [this, elementLayout]() {
+		connect(deleteButton, &QPushButton::clicked, [this,item, elementLayout]() {
 			int index = listLayout->indexOf(elementLayout);
+            auto itemFieldWidget = dynamic_cast<QFieldWidget*>(item);
+            if (itemFieldWidget)
+                itemFieldWidget->clearField();
 			this->deleteElement(index);
 		});
+
+
 
         updateSizeLabel();
 

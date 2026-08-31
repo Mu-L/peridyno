@@ -39,6 +39,7 @@ namespace dyno
 {
 	GLMeshRenderEngine::GLMeshRenderEngine()
 	{
+		this->showGround = false;
 	}
 
 	GLMeshRenderEngine::~GLMeshRenderEngine()

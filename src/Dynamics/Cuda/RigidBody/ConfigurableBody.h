@@ -45,6 +45,9 @@ namespace dyno
 
 		DEF_INSTANCE_IN(TriangleSet<TDataType>, TriangleSet, "TriangleSet of the boundary");
 
+	public:
+		void saveToPath(std::string path);
+
 	protected:
 		void resetStates() override;
 		void saveToFile() override;

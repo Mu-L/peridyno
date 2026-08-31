@@ -6,7 +6,7 @@
 #include "Primitive/Primitive3D.h"
 #include <stdio.h>
 
-#define FRUSTUM_CULL_DEBUG
+//#define FRUSTUM_CULL_DEBUG
 
 namespace dyno
 {

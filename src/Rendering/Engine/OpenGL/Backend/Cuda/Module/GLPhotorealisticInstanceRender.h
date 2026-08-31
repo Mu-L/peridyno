@@ -41,8 +41,6 @@ namespace dyno
 
 		DEF_VAR(bool, UseGlobalAlpha, false, "");
 
-		DEF_VAR(bool, UseGlobalAlpha, false, "");
-
 	public:
 		virtual std::string caption() override;
 

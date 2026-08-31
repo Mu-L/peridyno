@@ -37,9 +37,14 @@ namespace dyno
 							std::string iconPath = getAssetPath() + "/icon/ContentBrowser/image.png";
 							return QPixmap(iconPath.c_str());
 						}
-						else if (info.suffix() == "obj" || info.suffix() == "gltf" || info.suffix() == "glb" || info.suffix() == "fbx" || info.suffix() == "STL" || info.suffix() == "stl" || info.suffix() == "pdm")
+						else if (info.suffix() == "obj" || info.suffix() == "gltf" || info.suffix() == "glb" || info.suffix() == "fbx" || info.suffix() == "STL" || info.suffix() == "stl" )
 						{
 							std::string iconPath = getAssetPath() + "/icon/ContentBrowser/3dModel.png";
+							return QPixmap(iconPath.c_str());
+						}
+						else if (info.suffix() == "pdm")
+						{
+							std::string iconPath = getAssetPath() + "/icon/ContentBrowser/pdm.png";
 							return QPixmap(iconPath.c_str());
 						}
 					}
