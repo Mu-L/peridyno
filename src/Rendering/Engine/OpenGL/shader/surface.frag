@@ -291,10 +291,7 @@ vec3 ShadeTransparency()
 	vec3 N = GetNormal();
 	vec3 V = GetViewDir();
 
-	float dotNV = dot(N, V);
-	if (dotNV < 0.0)	N = -N;
-	
-	vec3 Lo = vec3(0);	
+	vec3 Lo = vec3(0);
 	vec3 baseColor = GetColor();
 
 	vec3 ORM = GetORM();
@@ -306,18 +303,11 @@ vec3 ShadeTransparency()
 		vec3 brdf = EvalPBR(baseColor, ORMCorrect.b, ORMCorrect.g, N, V, L);
 		vec3 radiance = uRenderParams.intensity.rgb * uRenderParams.intensity.a;
 		vec3 shadowFactor = vec3(1);
+		if (uRenderParams.direction.w != 0)
+			shadowFactor = GetShadowFactorSM(fs_in.position);
 		Lo += shadowFactor * radiance * brdf;
-
-		// Transmission: a semi-transparent surface lets light from BEHIND pass
-		// through (tinted by the material) instead of being fully occluded.
-		// N faces the viewer here, so dot(N, L) < 0 means the light is behind the
-		// surface. Without this, backlit faces only receive ambient and render black.
-		// Metals do not transmit, so we scale by (1 - metallic).
-		float back = max(dot(-N, L), 0.0);
-		float transmit = back * (1.0 - ORMCorrect.b);
-		Lo += radiance * baseColor * transmit;
 	}
-	
+
 	// for a simple camera light
 	{
 		vec3 brdf = EvalPBR(baseColor, ORMCorrect.b, ORMCorrect.g, N, V, V);
@@ -327,6 +317,10 @@ vec3 ShadeTransparency()
 
 	// ambient light
 	vec3 ambient = uRenderParams.ambient.rgb * uRenderParams.ambient.a * baseColor;
+
+	// back faces: ambient only
+	if (dot(N, V) < 0.0)
+		Lo = vec3(0);
 
 	vec3 color = ambient + Lo;
 	color = ReinhardTonemap(color);

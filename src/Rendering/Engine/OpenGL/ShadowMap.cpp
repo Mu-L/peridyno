@@ -351,12 +351,13 @@ namespace dyno
 				{
 					if (!node->isVisible())	return;
 
-					for (auto iter : node->graphicsPipeline()->activeModules()) {
-						auto m = dynamic_cast<GLVisualModule*>(iter.get());
-						if (m && m->isVisible()) {
-							m->draw(params);
-						}
+				for (auto iter : node->graphicsPipeline()->activeModules()) {
+					auto m = dynamic_cast<GLVisualModule*>(iter.get());
+					// transparent objects don't cast shadows
+					if (m && m->isVisible() && !m->isTransparent()) {
+						m->draw(params);
 					}
+				}
 				}
 				RenderParams params;
 			} action;
