@@ -793,6 +793,12 @@ namespace dyno
 		DYN_FUNC bool intersect(const TAlignedBox3D<Real>& abox, TAlignedBox3D<Real>& interBox) const;
 		DYN_FUNC bool checkOverlap(const TAlignedBox3D<Real>& abox) const;
 
+		DYN_FUNC bool contain(const TAlignedBox3D<Real>& abox) const;
+		DYN_FUNC bool containStrictly(const TAlignedBox3D<Real>& abox) const;
+
+		DYN_FUNC bool isContainedBy(const TAlignedBox3D<Real>& abox) const;
+		DYN_FUNC bool isContainedStrictlyBy(const TAlignedBox3D<Real>& abox) const;
+
 		DYN_FUNC TAlignedBox3D<Real> merge(const TAlignedBox3D<Real>& aabb) const;
 
 		DYN_FUNC TAlignedBox3D<Real> merge(const Vector<Real, 3>& point);

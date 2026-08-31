@@ -121,8 +121,8 @@ namespace dyno
      */
     template <typename Integer>
     inline DYN_FUNC Integer gcd(Integer a, Integer b) {
-		while (b != 0) {
-			int c = a % b;
+		while (b != Integer(0)) {
+            Integer c = a % b;
 			a = b;
 			b = c;
 		}

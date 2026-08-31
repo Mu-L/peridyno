@@ -152,7 +152,6 @@ namespace dyno
 
 		mVer2Edge.resize(counter);
 
-		counter.reset();
 		cuExecute(mEdges.size(),
 			ES_SetupEdgeIds,
 			mVer2Edge,

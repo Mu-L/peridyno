@@ -11,6 +11,13 @@ namespace dyno
 	typedef typename ::dyno::TAlignedBox3D<Real> AABB;
 	typedef unsigned long long int PKey;
 
+	DECLARE_ENUM(BroadPhaseMode,
+		Overlap = 0,			// A and B overlap
+		Containing = 1,			// A contains B
+		ContainingStrictly = 2,		// A strictly contains B
+		Contained = 3,			// A is contained in B
+		ContainedStrictly = 4);	// A is strictly contained in B
+
 	template<typename TDataType>
 	class CollisionDetectionBroadPhase : public ComputeModule
 	{
@@ -30,9 +37,12 @@ namespace dyno
 
 		DEF_ENUM(EStructure, AccelerationStructure, EStructure::BVH, "Acceleration structure");
 
+		DEF_ENUM(BroadPhaseMode, Mode, BroadPhaseMode::Overlap, "");
+
 		DEF_VAR(Real, GridSizeLimit, 0.005, "Limit the smallest grid size");
 
-		DEF_VAR(bool, SelfCollision, false, "");
+		//This variable is only valid for the BroadPhaseMode::Overlap mode when only the source is input, if false, both A->B and B-A will be returned, otherwise only one of the two pairs is returned.
+		DEF_VAR(bool, IsUnique, true, "");
 
 		DEF_ARRAY_IN(AABB, Source, DeviceType::GPU, "");
 

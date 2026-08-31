@@ -1018,7 +1018,7 @@ namespace dyno
         DYN_FUNC bool try_add(const ext_sgn_int192_t& b, ext_sgn_int192_t& result) const
         {
             uint192_t abs_a = uint192_t(limb0, limb1, limb2);
-            uint192_t abs_b = uint192_t(limb0, limb1, limb2);
+            uint192_t abs_b = uint192_t(b.limb0, b.limb1, b.limb2);
             uint192_t abs_res;
             if (neg_mask == b.neg_mask)
             {
@@ -1030,12 +1030,16 @@ namespace dyno
                 result.neg_mask = neg_mask;
                 return true;
             }
-            if (!abs_a.try_sub(abs_b, abs_res))
-                return false;
+            // Opposite signs: subtract the smaller magnitude from the larger one,
+            // which can never overflow.
+            uint64_t a_ge_b = dyno::abs_greater_mask(limb2, limb1, limb0, b.limb2, b.limb1, b.limb0);
+            if (a_ge_b)
+                abs_a.try_sub(abs_b, abs_res);
+            else
+                abs_b.try_sub(abs_a, abs_res);
             result.limb0 = abs_res.lo;
             result.limb1 = abs_res.mi;
             result.limb2 = abs_res.hi;
-            uint64_t a_ge_b = dyno::abs_greater_mask(limb2, limb1, limb0, b.limb2, b.limb1, b.limb0);
             result.neg_mask = (a_ge_b & neg_mask) | (~a_ge_b & b.neg_mask);
             return true;
         }
@@ -1051,7 +1055,7 @@ namespace dyno
         DYN_FUNC bool try_mul(const ext_sgn_int192_t& b, ext_sgn_int192_t& res) const
         {
             uint192_t abs_a = uint192_t(limb0, limb1, limb2);
-            uint192_t abs_b = uint192_t(limb0, limb1, limb2);
+            uint192_t abs_b = uint192_t(b.limb0, b.limb1, b.limb2);
             uint192_t abs_res;
             if (!abs_a.try_mul(abs_b, abs_res))
                 return false;
@@ -1651,7 +1655,7 @@ namespace dyno
         DYN_FUNC bool try_add(const uint512_t& b, uint512_t& res) const
         {
             uint64_t r0, r1, r2, r3, r4, r5, r6, r7;
-            uint64_t t, c;
+            uint64_t c;
 
             r0 = lo0 + b.lo0;
             c = (r0 < lo0);
@@ -1678,7 +1682,7 @@ namespace dyno
         DYN_FUNC uint512_t operator+(const uint512_t& b) const
         {
             uint64_t r0, r1, r2, r3, r4, r5, r6, r7;
-            uint64_t t, c;
+            uint64_t c;
 
             r0 = lo0 + b.lo0;
             c = (r0 < lo0);

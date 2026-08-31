@@ -45,6 +45,7 @@ namespace dyno
 		: ComputeModule()
 	{
 		this->varGridSizeLimit()->setValue(0.01);
+		this->inTarget()->tagOptional(true);
 	}
 
 	template<typename TDataType>
@@ -435,7 +436,7 @@ namespace dyno
 			aabb_src,
 			aabb_tar,
 			octree,
-			this->varSelfCollision()->getValue()
+			false
 		);
 
 		int total_node_num = thrust::reduce(thrust::device, mCounter.begin(), mCounter.begin() + mCounter.size(), (int)0, thrust::plus<int>());
@@ -458,7 +459,7 @@ namespace dyno
 			aabb_src,
 			aabb_tar,
 			octree,
-			this->varSelfCollision()->getValue());
+			false);
 
 		// 		print(counter);
 		// 		print(ids);
@@ -482,7 +483,7 @@ namespace dyno
 			mCounter,
 			aabb_src,
 			octree,
-			this->varSelfCollision()->getValue());
+			false);
 
 		contacts.resize(mNewCounter);
 
@@ -493,7 +494,7 @@ namespace dyno
 			mCounter,
 			aabb_src,
 			octree,
-			this->varSelfCollision()->getValue());
+			false);
 
 		CArrayList<int> hContacts;
 		hContacts.assign(contacts);
@@ -502,46 +503,189 @@ namespace dyno
 	}
 
 	template<typename TDataType, typename AABB>
-	__global__ void CDBP_RequestIntersectionNumberBVH(
+	__global__ void CDBP_RequestIntersectionNumberOverlap(
 		DArray<uint> count,
 		DArray<AABB> aabbs,
 		LinearBVH<TDataType> bvh,
-		bool self_collision)
+		bool requestSelf,
+		bool isUnique)
 	{
 		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (tId >= aabbs.size()) return;
 
-		if (self_collision)
-			count[tId] = bvh.requestIntersectionNumber(aabbs[tId], tId);
+		if (requestSelf)
+		{
+			if (isUnique)
+			{
+				count[tId] = bvh.requestIntersectionNumber(tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.checkOverlap(b);}, [](const int a, const int b) {return a < b;});
+			}
+			else
+			{
+				count[tId] = bvh.requestIntersectionNumber(tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.checkOverlap(b);}, [](const int a, const int b) {return a != b;});
+			}
+		}
 		else
-			count[tId] = bvh.requestIntersectionNumber(aabbs[tId]);
+		{
+			count[tId] = bvh.requestIntersectionNumber(tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.checkOverlap(b);}, [](const int a, const int b) {return true;});
+		}
 	}
 
 
 	template<typename TDataType, typename AABB>
-	__global__ void CDBP_RequestIntersectionIdsBVH(
+	__global__ void CDBP_RequestIntersectionIdsOverlap(
 		DArrayList<int> idLists,
 		DArray<AABB> aabbs,
 		LinearBVH<TDataType> bvh,
-		bool self_collision)
+		bool requestSelf,
+		bool isUnique)
 	{
 		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
 		if (tId >= aabbs.size()) return;
 
-		if (self_collision)
-			bvh.requestIntersectionIds(idLists[tId], aabbs[tId], tId);
+		if (requestSelf)
+		{
+			if (isUnique)
+			{
+				bvh.requestIntersectionIds(idLists[tId], tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.checkOverlap(b);}, [](const int a, const int b) {return a < b;});
+			}
+			else
+			{
+				bvh.requestIntersectionIds(idLists[tId], tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.checkOverlap(b);}, [](const int a, const int b) {return a != b;});
+			}
+		}
 		else
-			bvh.requestIntersectionIds(idLists[tId], aabbs[tId]);
+		{
+			bvh.requestIntersectionIds(idLists[tId], tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.checkOverlap(b);}, [](const int a, const int b) {return true;});
+		}
+	}
+
+	template<typename TDataType, typename AABB>
+	__global__ void CDBP_RequestIntersectionNumberContained(
+		DArray<uint> count,
+		DArray<AABB> aabbs,
+		LinearBVH<TDataType> bvh,
+		bool requestSelf)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= aabbs.size()) return;
+
+		if (requestSelf)
+		{
+			count[tId] = bvh.requestIntersectionNumber(tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.isContainedBy(b);}, [](const int a, const int b) {return a != b;});
+		}
+		else
+		{
+			count[tId] = bvh.requestIntersectionNumber(tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.isContainedBy(b);}, [](const int a, const int b) {return true;});
+		}
+	}
+
+	template<typename TDataType, typename AABB>
+	__global__ void CDBP_RequestIntersectionIdsContained(
+		DArrayList<int> idLists,
+		DArray<AABB> aabbs,
+		LinearBVH<TDataType> bvh,
+		bool requestSelf)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= aabbs.size()) return;
+
+		if (requestSelf)
+		{
+			bvh.requestIntersectionIds(idLists[tId], tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.isContainedBy(b);}, [](const int a, const int b) {return a != b;});
+		}
+		else
+		{
+			bvh.requestIntersectionIds(idLists[tId], tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.isContainedBy(b);}, [](const int a, const int b) {return true;});
+		}
+	}
+
+	template<typename TDataType, typename AABB>
+	__global__ void CDBP_RequestIntersectionNumberStrictlyContained(
+		DArray<uint> count,
+		DArray<AABB> aabbs,
+		LinearBVH<TDataType> bvh,
+		bool requestSelf)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= aabbs.size()) return;
+
+		count[tId] = bvh.requestIntersectionNumber(tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.isContainedStrictlyBy(b);}, [](const int a, const int b) {return true;});
+	}
+
+	template<typename TDataType, typename AABB>
+	__global__ void CDBP_RequestIntersectionIdsStrictlyContained(
+		DArrayList<int> idLists,
+		DArray<AABB> aabbs,
+		LinearBVH<TDataType> bvh,
+		bool requestSelf)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= aabbs.size()) return;
+
+		bvh.requestIntersectionIds(idLists[tId], tId, aabbs[tId], [](const AABB& a, const AABB& b) {return a.isContainedStrictlyBy(b);}, [](const int a, const int b) {return true;});
+	}
+
+
+	__global__ void CDBP_SetupOutputElements(
+		DArray<int> elements,
+		DArray<uint> radix,
+		DArrayList<int> lists)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= lists.size()) return;
+
+		uint offset = radix[tId];
+		auto& list = lists[tId];
+		
+		for (uint i = 0; i < list.size(); i++)
+		{
+			elements[offset + i] = tId;
+		}
+	}
+
+	__global__ void CDBP_SetupOutputCounter(
+		DArray<uint> counter,
+		DArray<int> elements)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= elements.size()) return;
+
+		if ((tId < elements.size() - 1 && elements[tId] != elements[tId + 1]) || tId == elements.size() - 1)
+		{
+			atomicAdd(&counter[elements[tId]], tId + 1);
+		}
+
+		__syncthreads();
+
+		if (tId > 0 && elements[tId - 1] != elements[tId])
+		{
+			atomicSub(&counter[elements[tId]], tId);
+		}
+	}
+
+	__global__ void CDBP_SetupOutputLists(
+		DArrayList<int> lists,
+		DArray<uint> counts,
+		int* addr,
+		uint* radix)
+	{
+		int tId = threadIdx.x + (blockIdx.x * blockDim.x);
+		if (tId >= lists.size()) return;
+
+		auto& list = lists[tId];
+
+		list.assign(addr + radix[tId], counts[tId], counts[tId]);
 	}
 
 	template<typename TDataType>
 	void CollisionDetectionBroadPhase<TDataType>::doCollisionWithLinearBVH()
 	{
-		auto& aabb_src = this->inSource()->constData();
+		auto mode = this->varMode()->currentKey();
 
-		if (this->inTarget()->isModified()) {
-			bvh.construct(this->inTarget()->constData());
-		}
+		bool requestSelf = this->inTarget()->isEmpty();
+
+		auto source = this->inSource()->constDataPtr();
+		auto target = requestSelf ? this->inSource()->constDataPtr() : this->inTarget()->constDataPtr();
 
 		if (this->outContactList()->isEmpty()) {
 			this->outContactList()->allocate();
@@ -549,22 +693,183 @@ namespace dyno
 
 		auto& contacts = this->outContactList()->getData();
 
-		mCounter.resize(aabb_src.size());
-		cuExecute(aabb_src.size(),
-			CDBP_RequestIntersectionNumberBVH,
-			mCounter,
-			aabb_src,
-			bvh,
-			this->varSelfCollision()->getValue());
+		DArrayList<int> tempArr;
 
-		contacts.resize(mCounter);
+		auto RevertArrayList = [](DArrayList<int>& outLists, const DArrayList<int>& inLists, uint num) -> void
+			{
+				auto& inRadix = inLists.index();
+				auto& inElements = inLists.elements();
 
-		cuExecute(aabb_src.size(),
-			CDBP_RequestIntersectionIdsBVH,
-			contacts,
-			aabb_src,
-			bvh,
-			this->varSelfCollision()->getValue());
+				DArray<uint> counter(num);
+				counter.reset();
+
+				DArray<int> keys(inElements.size());
+				DArray<int> values(inElements.size());
+				keys.assign(inElements);
+
+				cuExecute(inLists.size(),
+					CDBP_SetupOutputElements,
+					values,
+					inRadix,
+					inLists);
+
+				thrust::sort_by_key(thrust::device, keys.begin(), keys.begin() + keys.size(), values.begin(), thrust::less<int>());
+
+				cuExecute(inElements.size(),
+					CDBP_SetupOutputCounter,
+					counter,
+					keys);
+
+				outLists.resize(counter);
+				outLists.elements().assign(values);
+
+				cuExecute(num,
+					CDBP_SetupOutputLists,
+					outLists,
+					counter,
+					outLists.elements().begin(),
+					outLists.index().begin()
+				);
+
+				counter.clear();
+				values.clear();
+				keys.clear();
+			};
+
+		CArrayList<int> hostArr;
+
+		switch (mode)
+		{
+		case BroadPhaseMode::Overlap:
+
+			bvh.construct(*target);
+
+			mCounter.resize(source->size());
+
+			cuExecute(source->size(),
+				CDBP_RequestIntersectionNumberOverlap,
+				mCounter,
+				*source,
+				bvh,
+				requestSelf,
+				this->varIsUnique()->getValue());
+
+			contacts.resize(mCounter);
+
+			cuExecute(source->size(),
+				CDBP_RequestIntersectionIdsOverlap,
+				contacts,
+				*source,
+				bvh,
+				requestSelf,
+				this->varIsUnique()->getValue());
+
+			break;
+
+		case BroadPhaseMode::Containing:
+
+			bvh.construct(*source);
+
+			mCounter.resize(target->size());
+
+			cuExecute(target->size(),
+				CDBP_RequestIntersectionNumberContained,
+				mCounter,
+				*target,
+				bvh,
+				requestSelf);
+
+			tempArr.resize(mCounter);
+
+			cuExecute(target->size(),
+				CDBP_RequestIntersectionIdsContained,
+				tempArr,
+				*target,
+				bvh,
+				requestSelf);
+
+			RevertArrayList(contacts, tempArr, source->size());
+
+			break; 
+
+		case BroadPhaseMode::ContainingStrictly:
+
+			bvh.construct(*source);
+
+			mCounter.resize(target->size());
+
+			cuExecute(target->size(),
+				CDBP_RequestIntersectionNumberStrictlyContained,
+				mCounter,
+				*target,
+				bvh,
+				requestSelf);
+
+			tempArr.resize(mCounter);
+
+			cuExecute(target->size(),
+				CDBP_RequestIntersectionIdsStrictlyContained,
+				tempArr,
+				*target,
+				bvh,
+				requestSelf);
+
+			RevertArrayList(contacts, tempArr, source->size());
+
+			break;
+
+		case BroadPhaseMode::Contained:
+
+			bvh.construct(*target);
+
+			mCounter.resize(source->size());
+
+			cuExecute(source->size(),
+				CDBP_RequestIntersectionNumberContained,
+				mCounter,
+				*source,
+				bvh,
+				requestSelf);
+
+			contacts.resize(mCounter);
+
+			cuExecute(source->size(),
+				CDBP_RequestIntersectionIdsContained,
+				contacts,
+				*source,
+				bvh,
+				requestSelf);
+
+			break;
+
+		case BroadPhaseMode::ContainedStrictly:
+
+			bvh.construct(*target);
+
+			mCounter.resize(source->size());
+
+			cuExecute(source->size(),
+				CDBP_RequestIntersectionNumberStrictlyContained,
+				mCounter,
+				*source,
+				bvh,
+				requestSelf);
+
+			contacts.resize(mCounter);
+
+			cuExecute(source->size(),
+				CDBP_RequestIntersectionIdsStrictlyContained,
+				contacts,
+				*source,
+				bvh,
+				requestSelf);
+
+			break;
+		default:
+			break;
+		}
+
+		tempArr.clear();
 	}
 
 	DEFINE_CLASS(CollisionDetectionBroadPhase);

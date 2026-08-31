@@ -132,7 +132,7 @@ namespace dyno {
 		if (num != m_num)
 			allocAuxiliaryArray(num);
 
-		return Reduce(val, num, m_aux, MaximumFunc<T>(), -(T)REAL_MAX);
+		return Reduce(val, num, m_aux, MaximumFunc<T>(), -(T)(std::numeric_limits<T>::max)());
 	}
 
 	template<typename T>
@@ -140,8 +140,7 @@ namespace dyno {
 	{
 		if (num != m_num)
 			allocAuxiliaryArray(num);
-
-		return Reduce(val, num, m_aux, MinimumFunc<T>(), (T)REAL_MAX);
+		return Reduce(val, num, m_aux, MinimumFunc<T>(), (T)(std::numeric_limits<T>::max)());
 	}
 
 	template<typename T>

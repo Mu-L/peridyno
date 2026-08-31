@@ -67,6 +67,10 @@ namespace dyno
 		const DArray<ElementType>& elements() const { return mElements; }
 		const DArray<List<ElementType>>& lists() const { return mLists; }
 
+		DArray<uint>& index() { return mIndex; }
+		DArray<ElementType>& elements() { return mElements; }
+		DArray<List<ElementType>>& lists() { return mLists; }
+
 		/*!
 		*	\brief	To avoid erroneous shallow copy.
 		*/

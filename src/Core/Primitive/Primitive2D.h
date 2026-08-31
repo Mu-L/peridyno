@@ -336,6 +336,8 @@ namespace dyno
 	template class TCircle2D<double>;
 	template class TAlignedBox2D<double>;
 	template class TOrientedBox2D<double>;
+
+	template class TAlignedBox2D<int>;
 }
 
 #include "Primitive2D.inl"
