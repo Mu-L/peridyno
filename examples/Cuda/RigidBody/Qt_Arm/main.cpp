@@ -103,27 +103,27 @@ std::shared_ptr<SceneGraph> creatArm()
 
 
 	float vScale = 0.01;
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm5, 1, arm6, 0, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(19.461, -4.84, 51.043) * vScale, false, 0, false, 0, 0, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm4, 2, arm5, 1, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(11.15, 3.774, 51.043) * vScale, false, 0, false, 0, 0, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm3, 3, arm4, 2, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(10.943, 3.693, -0.181) * vScale, false, 0, false, 0, 0, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm2, 4, arm3, 3, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(11.971, 3.792, -47.372) * vScale, false, 0, false, 0, 0, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm1, 5, arm2, 4, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(6.392, -1.914, -47.391) * vScale, false, 0, false, 0, 0, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm0, 6, arm1, 5, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0.616, -7.439, -47.391) * vScale, false, 0, false, 0, 0, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(twist, 7, arm0, 6, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(-3.519, -7.485, -47.355) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm5,  arm6, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(19.461, -4.84, 51.043) * vScale, false, 0, false, 0, 0, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm4,  arm5, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(11.15, 3.774, 51.043) * vScale, false, 0, false, 0, 0, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm3, arm4, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(10.943, 3.693, -0.181) * vScale, false, 0, false, 0, 0, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm2, arm3, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(11.971, 3.792, -47.372) * vScale, false, 0, false, 0, 0, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm1, arm2, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(6.392, -1.914, -47.391) * vScale, false, 0, false, 0, 0, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(arm0, arm1, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0.616, -7.439, -47.391) * vScale, false, 0, false, 0, 0, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(twist, arm0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(-3.519, -7.485, -47.355) * vScale, false, 0, true, 0, 0.0001, false));
 
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_Finger4, 8, twist, 7, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-10.072, -7.485, -43.111) * vScale, false, 0, true, 0, 0.0001, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_Finger4, 12, twist, 7, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-10.072, -7.485, -51.711) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_Finger4,  twist, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-10.072, -7.485, -43.111) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_Finger4,  twist, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-10.072, -7.485, -51.711) * vScale, false, 0, true, 0, 0.0001, false));
 
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_Finger3, 9, L_Finger4, 8, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-9.572, -6.833, -39.908) * vScale, false, 0, true, 0, 0.0001, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_Finger3, 13, R_Finger4, 12, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-9.572, -6.833, -54.899) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_Finger3, L_Finger4, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-9.572, -6.833, -39.908) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_Finger3,  R_Finger4, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-9.572, -6.833, -54.899) * vScale, false, 0, true, 0, 0.0001, false));
 
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_Finger2, 10, twist, 7, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-10.91, -5.286, -45.854) * vScale, false, 0, true, 0, 0.0001, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_Finger2, 14, twist, 7, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-10.91, -5.286, -48.911) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_Finger2, twist, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-10.91, -5.286, -45.854) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_Finger2, twist, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-10.91, -5.286, -48.911) * vScale, false, 0, true, 0, 0.0001, false));
 
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_FingerTip1, 11, L_Finger3, 9, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-19.087, -6.423, -35.64) * vScale, false, 0, true, 0, 0.0001, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_FingerTip1, 15, R_Finger3, 13, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-19.087, -6.424, -59.169) * vScale, false, 0, true, 0, 0.0001, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_FingerTip1, 11, L_Finger2, 10, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-19.874, -5.762, -37.807) * vScale, false, 0, true, 0, 0.0001, false));
-	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_FingerTip1, 15, R_Finger2, 14, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-19.874, -5.762, -57.002) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_FingerTip1, L_Finger3, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-19.087, -6.423, -35.64) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_FingerTip1, R_Finger3, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-19.087, -6.424, -59.169) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(L_FingerTip1, L_Finger2, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-19.874, -5.762, -37.807) * vScale, false, 0, true, 0, 0.0001, false));
+	multiBodyConfig.varJointConfigs()->pushBack(MultiBodyJointTuple(R_FingerTip1, R_Finger2, JointType::JOINT_Hinge, Vec3f(0, 1, 0), Vec3f(-19.874, -5.762, -57.002) * vScale, false, 0, true, 0, 0.0001, false));
 
 
 	arm->varConfiguration()->setValue(multiBodyConfig);

@@ -103,23 +103,23 @@ std::shared_ptr<ConfigurableBody<DataType3f>> getTank(std::shared_ptr<SceneGraph
 	}
 
 	float speed = 5.5;
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L0", 2, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L1", 3, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L2", 4, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L3", 5, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L4", 6, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L5", 7, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L6", 7, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L0", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L1", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L2", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L3", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L4", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L5", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L6", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
 
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R0", 9, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R1", 10, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R2", 11, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R3", 12, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R4", 13, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R5", 14, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R6", 15, "Main", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R0", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R1", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R2", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R3", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R4", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R5", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R6", "Main", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
 
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("Head", 1, "Main", 0, JointType::JOINT_Fixed, Vec3f(1, 0, 0), Vec3f(0), true, 0));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("Head", "Main", JointType::JOINT_Fixed, Vec3f(1, 0, 0), Vec3f(0), true, 0));
 
 
 	vehicle->varConfiguration()->setValue(configData);
@@ -182,14 +182,14 @@ std::shared_ptr<ConfigurableBody<DataType3f>> getVehicle(std::shared_ptr<SceneGr
 	}
 	float speed = 5.5;
 
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L1", 1, "Body", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L2", 2, "Body", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L3", 3, "Body", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L4", 4, "Body", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R1", 5, "Body", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R2", 6, "Body", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R3", 7, "Body", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R4", 8, "Body", 0, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L1", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L2", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L3", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("L4", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R1", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R2", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R3", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("R4", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, speed));
 
 
 	vehicle->varConfiguration()->setValue(configData);

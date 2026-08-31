@@ -84,11 +84,11 @@ std::shared_ptr<SceneGraph> creatCar()
 			break;
 	}
 
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("LF", 0, "Body", 5, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, 10));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("LB", 1, "Body", 5, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, 10));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("RF", 2, "Body", 5, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, 10));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("RB", 3, "Body", 5, JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, 10));
-	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("BackWheel", 4, "Body", 5, JointType::JOINT_Fixed, Vec3f(1, 0, 0), Vec3f(0), true, 0));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("LF", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, 10));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("LB", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, 10));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("RF", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, 10));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("RB", "Body", JointType::JOINT_Hinge, Vec3f(1, 0, 0), Vec3f(0), true, 10));
+	configData.varJointConfigs()->pushBack(MultiBodyJointTuple("BackWheel", "Body", JointType::JOINT_Fixed, Vec3f(1, 0, 0), Vec3f(0), true, 0));
 
 	configCar->varConfiguration()->setValue(configData);
 
