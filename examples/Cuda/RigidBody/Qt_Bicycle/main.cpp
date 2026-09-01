@@ -79,7 +79,8 @@ std::shared_ptr<SceneGraph> creatCar()
 	std::shared_ptr<SceneGraph> scn = std::make_shared<SceneGraph>();
 
 	auto bike = scn->addNode(std::make_shared<Bicycle<DataType3f>>());
-
+	bike->varVehiclesTransform()->clear();
+	bike->varVehiclesTransform()->pushBack(Transform3f());
 
 	auto multisystem = scn->addNode(std::make_shared<MultibodySystem<DataType3f>>());
 
