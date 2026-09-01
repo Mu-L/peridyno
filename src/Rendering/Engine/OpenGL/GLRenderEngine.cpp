@@ -26,7 +26,7 @@
 #include <memory>
 
 #include "screen.vert.h"
-#include "blend.frag.h"
+#include "wboit_composite.frag.h"
 #include "postprocess.frag.h"
 #include "surface.frag.h"
 
@@ -43,7 +43,7 @@ namespace dyno
 		delete mShadowMap;
 		delete mEnvmap;
 		delete mScreenQuad;
-		delete mBlendProgram;
+		delete mWBOITCompositeProgram;
 		delete mRenderHelper;
 		delete mFXAAFilter;
 	}
@@ -99,11 +99,14 @@ namespace dyno
 		mSelectIndexTex.release();
 		mSelectFramebuffer.release();
 
-		// release linked-list OIT objects
-		mFreeNodeIdx.release();
-		mLinkedListBuffer.release();
-		mHeadIndexTex.release();
-		mBlendProgram->release();
+		// release WBOIT objects
+		mAccumTex.release();
+		mRevealTex.release();
+		mAccumResolveTex.release();
+		mRevealResolveTex.release();
+		mWBOITFramebuffer.release();
+		mWBOITResolveFBO.release();
+		mWBOITCompositeProgram->release();
 
 		// release other objects
 		mScreenQuad->release();
@@ -112,31 +115,58 @@ namespace dyno
 
 	void GLRenderEngine::setupTransparencyPass()
 	{
-		mFreeNodeIdx.create(GL_ATOMIC_COUNTER_BUFFER, GL_DYNAMIC_DRAW);
-		mFreeNodeIdx.allocate(sizeof(int));
+		// Weighted Blended OIT G-buffers (RGBA16F, multisample to match MSAA)
+		mAccumTex.internalFormat = GL_RGBA16F;
+		mAccumTex.format = GL_RGBA;
+		mAccumTex.type = GL_HALF_FLOAT;
+		mAccumTex.create();
+		mAccumTex.resize(1, 1, 1);
 
-		mLinkedListBuffer.create(GL_SHADER_STORAGE_BUFFER, GL_DYNAMIC_DRAW);
-		struct NodeType
-		{
-			glm::vec4 color;
-			float	  depth;
-			unsigned int next;
-			unsigned int idx0;
-			unsigned int idx1;
-		};
-		mLinkedListBuffer.allocate(sizeof(NodeType) * MAX_OIT_NODES);
+		mRevealTex.internalFormat = GL_RGBA16F;
+		mRevealTex.format = GL_RGBA;
+		mRevealTex.type = GL_HALF_FLOAT;
+		mRevealTex.create();
+		mRevealTex.resize(1, 1, 1);
 
-		// transparency
-		mHeadIndexTex.internalFormat = GL_R32UI;
-		mHeadIndexTex.format = GL_RED_INTEGER;
-		mHeadIndexTex.type = GL_UNSIGNED_INT;
-		mHeadIndexTex.create();
-		mHeadIndexTex.resize(1, 1, 1);
+		// single-sample resolve targets for the composite pass
+		mAccumResolveTex.internalFormat = GL_RGBA16F;
+		mAccumResolveTex.format = GL_RGBA;
+		mAccumResolveTex.type = GL_HALF_FLOAT;
+		mAccumResolveTex.create();
+		mAccumResolveTex.resize(1, 1);
 
-		mBlendProgram = Program::createProgramSPIRV(
+		mRevealResolveTex.internalFormat = GL_RGBA16F;
+		mRevealResolveTex.format = GL_RGBA;
+		mRevealResolveTex.type = GL_HALF_FLOAT;
+		mRevealResolveTex.create();
+		mRevealResolveTex.resize(1, 1);
+
+		// WBOIT framebuffer: accum(0) + reveal(2) + the opaque depth (shared)
+		mWBOITFramebuffer.create();
+		mWBOITFramebuffer.bind();
+		mWBOITFramebuffer.setTexture(GL_DEPTH_ATTACHMENT, &mDepthTex);
+		mWBOITFramebuffer.setTexture(GL_COLOR_ATTACHMENT0, &mAccumTex);
+		mWBOITFramebuffer.setTexture(GL_COLOR_ATTACHMENT2, &mRevealTex);
+		// loc0=accum(COLOR_ATTACHMENT0), loc1=fragIndices(GL_NONE, unused here),
+		// loc2=revealage(COLOR_ATTACHMENT2). draw-buffer index == shader location.
+		const GLenum wboitBuffers[] = { GL_COLOR_ATTACHMENT0, GL_NONE, GL_COLOR_ATTACHMENT2 };
+		mWBOITFramebuffer.drawBuffers(3, wboitBuffers);
+		mWBOITFramebuffer.checkStatus();
+		mWBOITFramebuffer.unbind();
+
+		// single-sample resolve FBO for the composite pass
+		mWBOITResolveFBO.create();
+		mWBOITResolveFBO.bind();
+		mWBOITResolveFBO.setTexture(GL_COLOR_ATTACHMENT0, &mAccumResolveTex);
+		mWBOITResolveFBO.setTexture(GL_COLOR_ATTACHMENT2, &mRevealResolveTex);
+		mWBOITResolveFBO.drawBuffers(2, wboitBuffers);
+		mWBOITResolveFBO.checkStatus();
+		mWBOITResolveFBO.unbind();
+
+		// composite pass: blend resolved transparent layer over opaque color
+		mWBOITCompositeProgram = Program::createProgramSPIRV(
 			SCREEN_VERT, sizeof(SCREEN_VERT),
-			BLEND_FRAG, sizeof(BLEND_FRAG));
-
+			WBOIT_COMPOSITE_FRAG, sizeof(WBOIT_COMPOSITE_FRAG));
 
 		mPostProcessProgram = Program::createProgramSPIRV(
 			SCREEN_VERT, sizeof(SCREEN_VERT),
@@ -399,28 +429,46 @@ namespace dyno
 				Vec4f(this->rulerColor.r, this->rulerColor.g, this->rulerColor.b, this->rulerColor.a));
 		}
 
-		// Step 4: transparency objects
+		// Step 4: transparency objects (Weighted Blended OIT)
 		{
-			// reset free node index
-			const int zero = 0;
-			mFreeNodeIdx.load((void*)&zero, sizeof(int));
-
-			// reset head index
-			const int clear = 0xFFFFFFFF;
-			mHeadIndexTex.clear((void*)&clear);
-
-			// binding...
-			glBindImageTexture(0, mHeadIndexTex.id, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
-			mFreeNodeIdx.bindBufferBase(0);
-			mLinkedListBuffer.bindBufferBase(0);
-
-			// draw to no attachments
-			mFramebuffer.drawBuffers(0, 0);
-
-			// OIT: first pass
-			glDepthMask(false);
 			params.mode = GLRenderMode::TRANSPARENCY;
-			for (int i = 0; i < mRenderItems.size(); i++) 
+
+			// bind the WBOIT framebuffer, depth-tested against the opaque depth
+		mWBOITFramebuffer.bind(GL_DRAW_FRAMEBUFFER);
+		// Map fragment-shader output locations to attachments:
+		//   loc0 = fragColor  (accum)      -> draw-buffer index 0 -> COLOR_ATTACHMENT0
+		//   loc1 = fragIndices (picking, unused here) -> index 1 -> GL_NONE (discarded)
+		//   loc2 = outReveal  (revealage)  -> draw-buffer index 2 -> COLOR_ATTACHMENT2
+		// gl_FragData[location] routes to draw-buffer INDEX == location, so the
+		// revealage output MUST sit at index 2 (matching its shader location).
+		const unsigned int wboitBuffers[] = { GL_COLOR_ATTACHMENT0, GL_NONE, GL_COLOR_ATTACHMENT2 };
+		mWBOITFramebuffer.drawBuffers(3, wboitBuffers);
+
+		// clear accum -> (0,0,0,0), revealage -> (1,1,1,1) (fully transparent)
+		// glClearBufferfv's 2nd arg is the DRAW-BUFFER INDEX (0-based), NOT the
+		// GL_COLOR_ATTACHMENTn enum. accum is index 0, revealage is index 2.
+		const float accumClear[4] = { 0.f, 0.f, 0.f, 0.f };
+		const float revealClear[4] = { 1.f, 1.f, 1.f, 1.f };
+		glClearBufferfv(GL_COLOR, 0, accumClear);
+		glClearBufferfv(GL_COLOR, 2, revealClear);
+
+		// depth test against opaque (read-only, no depth writes).
+		// Use GL_LESS (strictly closer) instead of GL_LEQUAL: a coplanar /
+		// coincident transparent surface then cleanly FAILS the test (hidden
+		// behind the opaque one) instead of fighting frame-to-frame, which
+		// would otherwise manifest as flickering at opaque/transparent overlap.
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+		glDepthMask(GL_FALSE);
+
+		// per-attachment blending (matched to the draw-buffer indices above):
+		//   accum   (idx 0): additive          (ONE, ONE)
+		//   revealage(idx 2): multiplicative    (ZERO, ONE_MINUS_SRC_ALPHA)
+		glEnable(GL_BLEND);
+		glBlendFunci(0, GL_ONE, GL_ONE);
+		glBlendFunci(2, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+
+			for (int i = 0; i < mRenderItems.size(); i++)
 			{
 				if (mRenderItems[i].node->isVisible() && mRenderItems[i].visualModule->isTransparent())
 				{
@@ -428,19 +476,41 @@ namespace dyno
 					mRenderItems[i].visualModule->draw(params);
 				}
 			}
-			glDepthMask(true);
 
-			// OIT: blend alpha
-			mFramebuffer.drawBuffers(2, attachments);
-			mBlendProgram->use();
+			glDisable(GL_BLEND);
+			glDepthMask(GL_TRUE);
+
+			// resolve the (possibly multisample) G-buffers to single-sample targets
+			mWBOITFramebuffer.bind(GL_READ_FRAMEBUFFER);
+			mWBOITResolveFBO.bind(GL_DRAW_FRAMEBUFFER);
+			glReadBuffer(GL_COLOR_ATTACHMENT0);
+			glDrawBuffer(GL_COLOR_ATTACHMENT0);
+			glBlitFramebuffer(0, 0, rparams.width, rparams.height,
+				0, 0, rparams.width, rparams.height,
+				GL_COLOR_BUFFER_BIT, GL_LINEAR);
+		glReadBuffer(GL_COLOR_ATTACHMENT2);
+		glDrawBuffer(GL_COLOR_ATTACHMENT2);
+			glBlitFramebuffer(0, 0, rparams.width, rparams.height,
+				0, 0, rparams.width, rparams.height,
+				GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+			// composite the resolved transparent layer over the opaque color buffer
+			mFramebuffer.bind(GL_DRAW_FRAMEBUFFER);
+			mFramebuffer.drawBuffers(1, attachments); // color only
 			glDisable(GL_DEPTH_TEST);
-			glEnable(GL_BLEND);
-			glBlendEquationSeparate(GL_FUNC_ADD, GL_MAX);
+		glEnable(GL_BLEND);
+		// wboit_composite outputs PREMULTIPLIED color (accum.rgb/accum.a already
+		// carries alpha), so use ONE / ONE_MINUS_SRC_ALPHA for correct compositing.
+		glBlendFunci(0, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			mWBOITCompositeProgram->use();
+			mAccumResolveTex.bind(GL_TEXTURE0);
+			mWBOITCompositeProgram->setInt("uAccum", 0);
+			mRevealResolveTex.bind(GL_TEXTURE1);
+			mWBOITCompositeProgram->setInt("uReveal", 1);
 			mScreenQuad->draw();
-			glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 			glDisable(GL_BLEND);
 			glEnable(GL_DEPTH_TEST);
-		}		
+		}
 
 		// Step 5: scene bounding box
 		if (this->showSceneBounds && scene != 0)
@@ -488,7 +558,11 @@ namespace dyno
 		mColorTex.resize(w, h, samples);
 		mDepthTex.resize(w, h, samples);
 		mIndexTex.resize(w, h, samples);
-		mHeadIndexTex.resize(w, h, samples);
+		mAccumTex.resize(w, h, samples);
+		mRevealTex.resize(w, h, samples);
+
+		mAccumResolveTex.resize(w, h);
+		mRevealResolveTex.resize(w, h);
 
 		mSelectIndexTex.resize(w, h);
 
