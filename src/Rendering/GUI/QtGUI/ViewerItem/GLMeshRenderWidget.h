@@ -35,13 +35,15 @@
 #include <QOpenGLWidget>
 #endif
 
+#include "QtGUI/Common.h"
+
 
 namespace dyno
 {
 
 	class GLMeshRenderEngine;
 
-	class GLMeshRenderWidget
+	class PERIDYNO_QTGUI_API GLMeshRenderWidget
 		: public QOpenGLWidget
 		, private QOpenGLExtraFunctions
 		, public RenderWindow
